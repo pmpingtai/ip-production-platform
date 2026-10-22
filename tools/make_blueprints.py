@@ -434,7 +434,8 @@ def build_api():
             "psd", "ai", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt"]
     status_v = pick("1.status", SAVE_STATUSES, '"執行創作中"')
     version_v = pick("1.version", ["V1", "V2", "V3", "V4", "V5"], "null")
-    link_v = '{{if(startsWith(1.link; "https://"); substring(1.link; 0; 500); "")}}'
+    # Make 沒有 startsWith，用 indexOf = 0 判斷開頭
+    link_v = '{{if(indexOf(1.link; "https://") = 0; substring(1.link; 0; 500); "")}}'
     note_v = cut("1.note", 1000)
     submit = 'if(1.status = "待審核"; '
     g2, G2, own2 = read_task("交件")

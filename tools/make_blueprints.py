@@ -251,6 +251,15 @@ def push(b, name, to, text):
                   onerror=[b.ignore()])
 
 
+# 主動推播會扣 LINE 官方帳號每月免費訊息額度。2026-10-22 決定這一版先不推播（成員自己打開頁面看進度），
+# 設定檔 line.push 改成 true 就會恢復：新申請、申請結果、送審、審核結果四種通知
+PUSH = bool(LN.get("push", False))
+
+
+def if_push(*mods):
+    return list(mods) if PUSH else []
+
+
 # ==== 風雅存｜LIFF API ====
 def build_api():
     b = B()
@@ -310,6 +319,8 @@ def build_api():
 
     def notify():
         # 回應之後才通知；訊息不放申請者填的文字，避免被插入內容
+        if not PUSH:
+            return []
         approvers = b.search("找製作人與導演（通知申請）", DS_MEMBER,
                              [[c(prop("狀態", "select"), "select:equals", "已核准"), c(prop("角色", "select"), "select:equals", r)]
                               for r in APPROVERS], limit="10")
@@ -376,7 +387,8 @@ def build_api():
         b.update("核准：設定角色", T1_page, [fv("狀態", "select", "已核准"), fv("角色", "select", role), now("核准時間"),
                                        fv("核准人", "rich_text", w_name)]),
         respond("回傳已核准", '{"ok":true}'),
-        push(b, "通知申請者已核准", T1_uid, "✅ 你已加入風雅存製作團隊（角色：" + role + "）。\n下方選單會換成團隊版，點選單就能查看工作與進度。"),
+        *if_push(push(b, "通知申請者已核准", T1_uid,
+                      "✅ 你已加入風雅存製作團隊（角色：" + role + "）。\n下方選單會換成團隊版，點選單就能查看工作與進度。")),
         # Router 一定是路線的最後一個模組，所以推播放在換選單之前
         b.router("依角色換選單", [
             (flt("團隊成員選單", [[c(role, "text:equal", r)] for r in CREATORS]), link_menu(b, T1_uid, T1_page, "團隊成員", "核准")),
@@ -394,8 +406,8 @@ def build_api():
         (flt("可以退回", [ok2]), [
             b.update("退回申請", f"{{{{{T2}.id}}}}", [fv("狀態", "select", "已退回"), fv("核准人", "rich_text", w_name)]),
             respond("回傳已退回", '{"ok":true}'),
-            push(b, "通知申請者未通過", sp(T2, "LINE User ID", "[].plain_text"),
-                 "你的團隊成員申請沒有通過。如有疑問請洽製作人，也可以修改資料後重新申請：\n" + LIFF + "?v=join")]),
+            *if_push(push(b, "通知申請者未通過", sp(T2, "LINE User ID", "[].plain_text"),
+                          "你的團隊成員申請沒有通過。如有疑問請洽製作人，也可以修改資料後重新申請：\n" + LIFF + "?v=join"))]),
         (flt("不能退回", bad2), [respond("回傳不能退回", '{"ok":false,"error":"bad_target"}', "409")]),
     ])]
 
@@ -451,11 +463,18 @@ def build_api():
                  + ' = "待審核"; ifempty(' + cur + '; "V1"); ' + nxt + "))")
     version_v = "{{" + submit + on_submit + "; " + cur + ")}}"
 
-    def save_route(label, file_link):
+    def submit_notice(label):
+        if not PUSH:
+            return []
         approvers = b.search(f"找製作人與導演（送審通知，{label}）", DS_MEMBER,
                              [[c(prop("狀態", "select"), "select:equals", "已核准"), c(prop("角色", "select"), "select:equals", r)]
                               for r in APPROVERS], limit="10")
         approvers["filter"] = flt("送審才通知", [[c("{{1.status}}", "text:equal", "待審核")]])
+        return [approvers,
+                push(b, f"通知製作人與導演有人送審（{label}）", sp(approvers["id"], "LINE User ID", "[].plain_text"),
+                     "📤 " + w_role + "送審：" + task_name + "\n" + LIFF + f"?v=task&id={{{{{G2}.id}}}}")]
+
+    def save_route(label, file_link):
         return [
             b.update(f"更新任務（{label}）", f"{{{{{G2}.id}}}}", [
                 fv("狀態", "select", status_v), fv("版本號", "select", version_v), fv("交付雲端連結", "url", link_v),
@@ -472,9 +491,7 @@ def build_api():
                 now("時間"), fv("意見", "rich_text", note_v), fv("雲端連結", "url", link_v), fv("上傳檔案", "url", file_link)],
                 ds=DS_REVIEW),
             respond(f"回傳已儲存（{label}）", '{"ok":true}'),
-            approvers,
-            push(b, f"通知製作人與導演有人送審（{label}）", sp(approvers["id"], "LINE User ID", "[].plain_text"),
-                 "📤 " + w_role + "送審：" + task_name + "\n" + LIFF + f"?v=task&id={{{{{G2}.id}}}}"),
+            *submit_notice(label),
         ]
     up = b.drive_upload("交件檔案存到雲端硬碟", sp(G2, "序號") + "_{{formatDate(now; \"YYYYMMDD-HHmmss\")}}."
                         + pick("1.ext", EXTS, '"bin"'), "1.file")
@@ -496,18 +513,21 @@ def build_api():
     result = "{{" + approved + '"已核准"; "退回修改")}}'
     comment_v = cut("1.comment", 1000)
     task3 = sp(G3, "任務名稱", "[].plain_text")
-    doers = b.search("找負責這個任務的成員", DS_MEMBER, [[c(prop("狀態", "select"), "select:equals", "已核准")]], limit="50")
-    D = doers["id"]
-    # 推播內文是 JSON，運算式裡帶引號會被跳脫而算不出來，所以核准、退回各用一則固定文字
-    doer_is = [c(sp(D, "角色", ".name"), "text:equal", role_of(sp(G3, "執行職掌", ".name"))),
-               c(sp(D, "LINE User ID", "[].plain_text"), "exist")]
-    task_link = "\n" + LIFF + f"?v=task&id={{{{{G3}.id}}}}"
-    notify_doer = b.router("通知負責成員審核結果", [
-        (flt("核准通知", [doer_is + [c("{{1.decision}}", "text:equal", "approve")]]), [
-            push(b, "通知已核准", sp(D, "LINE User ID", "[].plain_text"), "✅ 已核准：" + task3 + task_link)]),
-        (flt("退回通知", [doer_is + [c("{{1.decision}}", "text:equal", "return")]]), [
-            push(b, "通知退回修改", sp(D, "LINE User ID", "[].plain_text"), "↩️ 退回修改：" + task3 + "\n請打開任務查看審核意見。" + task_link)]),
-    ])
+    review_notice = []
+    if PUSH:
+        doers = b.search("找負責這個任務的成員", DS_MEMBER, [[c(prop("狀態", "select"), "select:equals", "已核准")]], limit="50")
+        D = doers["id"]
+        # 推播內文是 JSON，運算式裡帶引號會被跳脫而算不出來，所以核准、退回各用一則固定文字
+        doer_is = [c(sp(D, "角色", ".name"), "text:equal", role_of(sp(G3, "執行職掌", ".name"))),
+                   c(sp(D, "LINE User ID", "[].plain_text"), "exist")]
+        task_link = "\n" + LIFF + f"?v=task&id={{{{{G3}.id}}}}"
+        review_notice = [doers, b.router("通知負責成員審核結果", [
+            (flt("核准通知", [doer_is + [c("{{1.decision}}", "text:equal", "approve")]]), [
+                push(b, "通知已核准", sp(D, "LINE User ID", "[].plain_text"), "✅ 已核准：" + task3 + task_link)]),
+            (flt("退回通知", [doer_is + [c("{{1.decision}}", "text:equal", "return")]]), [
+                push(b, "通知退回修改", sp(D, "LINE User ID", "[].plain_text"),
+                     "↩️ 退回修改：" + task3 + "\n請打開任務查看審核意見。" + task_link)]),
+        ])]
     review_flow = [g3, b.router("可否審核", [
         (flt("待審核：可以審核", [[c(sp(G3, "狀態", ".name"), "text:equal", "待審核"), c("{{1.decision}}", "text:equal", d)]
                                   for d in ("approve", "return")]), [
@@ -521,7 +541,7 @@ def build_api():
                 fv("版本號", "select", sp(G3, "版本號", ".name")), fv("身分", "select", w_role),
                 fv("姓名", "rich_text", w_name), now("時間"), fv("意見", "rich_text", comment_v)], ds=DS_REVIEW),
             respond("回傳已審核", '{"ok":true}'),
-            doers, notify_doer]),
+            *review_notice]),
         (flt("不是待審核", [[c(sp(G3, "狀態", ".name"), "text:notequal", "待審核")]]), [
             respond("回傳不能審核", '{"ok":false,"error":"bad_target"}', "409")]),
     ])]

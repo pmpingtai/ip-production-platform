@@ -251,7 +251,7 @@ function renderApprove() {
   if (!S.pending) { $('#app').innerHTML = '<p class="blocked">讀取申請中…</p>'; return; }
   const roles = [...S.roles.creators, ...S.roles.managers];
   if (!S.pending.length) {
-    $('#app').innerHTML = '<div class="status"><div class="big">✅</div><h2>目前沒有待核准的申請</h2><p class="lead">有人申請時，你會收到 LINE 通知。</p></div>';
+    $('#app').innerHTML = '<div class="status"><div class="big">✅</div><h2>目前沒有待核准的申請</h2><p class="lead">有人申請時會出現在這裡。</p></div>';
     return;
   }
   $('#app').innerHTML = `<section class="card"><h2>待核准<span class="count">${S.pending.length}</span></h2>
@@ -422,7 +422,7 @@ async function saveTask() {
   d.busy = true; render();
   try {
     await api.save(f);
-    toast(f.status === '待審核' ? '已送審，導演與製作人會收到通知' : '已儲存');
+    toast(f.status === '待審核' ? '已送審，導演與製作人可在團隊進度看到' : '已儲存');
     S.tasks = null;   // 回到清單時重新讀取
     await openTask(d.id, d.from);
   } catch (x) {
@@ -441,7 +441,7 @@ async function reviewTask(decision) {
   d.busy = true; render();
   try {
     await api.review(d.id, decision, comment);
-    toast(decision === 'approve' ? '已核准，已通知負責的成員' : '已退回，已通知負責的成員');
+    toast(decision === 'approve' ? '已核准' : '已退回，成員可在我的工作看到審核意見');
     S.tasks = null;
     await openTask(d.id, d.from);
   } catch (x) {
@@ -598,7 +598,7 @@ async function loadTasks() {
     render();
     if (!isMember() || S.view === 'join') return;
     if (S.view === 'approve') { if (isApprover()) { S.pending = parsePending((await api.pending()).members); render(); } return; }
-    // 推播連結會直接打開某一項工作
+    // ?v=task&id= 直接打開某一項工作（推播連結用；目前沒有推播，仍保留）
     if (S.view === 'task') return S.detail.id ? openTask(S.detail.id, isManager() ? 'team' : 'work') : goBack();
     await loadTasks();
     render();

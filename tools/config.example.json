@@ -13,7 +13,8 @@
   },
   "line": {
     "login_channel_id": "LINE Login channel 的 Channel ID",
-    "liff_id": "LIFF ID"
+    "liff_id": "LIFF ID",
+    "push": false
   },
   "notion": {
     "members_ds": "👥 LINE 團隊成員 的 data source ID",

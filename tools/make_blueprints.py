@@ -474,6 +474,9 @@ def build_menu():
             "metadata": b.meta("逐張檢查")}
     F = feed["id"]
     delete = b.line("刪除舊選單", f"/v2/bot/richmenu/{{{{{F}.richMenuId}}}}", "DELETE", onerror=[b.ignore()])
+    # 篩選一定要在放進 router 之前設定：router 會複製模組，之後才設的篩選不會進藍圖
+    #（2026-10-22 第一次執行因此把剛建好的四張也刪掉了）
+    delete["filter"] = flt("不是新的四張", [[c(f"{{{{{F}.richMenuId}}}}", "text:notequal", new_id(m)) for m in MENUS]])
     members = b.search("找所有已核准的成員", DS_MEMBER, [[c(prop("狀態", "select"), "select:equals", "已核准")]], limit="200")
     MB = members["id"]
     mb_uid, mb_role, mb_page = sp(MB, "LINE User ID", "[].plain_text"), sp(MB, "角色", ".name"), f"{{{{{MB}.id}}}}"
@@ -488,7 +491,6 @@ def build_menu():
         (flt("已核准成員重新綁定", [all_made]), [members, b.router("依角色綁定", [
             rebind("團隊成員", CREATORS), rebind("製作人", ["製作人"]), rebind("導演", ["導演"])])]),
     ]))
-    delete["filter"] = flt("不是新的四張", [[c(f"{{{{{F}.richMenuId}}}}", "text:notequal", new_id(m)) for m in MENUS]])
     return blueprint("建立圖文選單（手動執行）", flow, instant=False)
 
 

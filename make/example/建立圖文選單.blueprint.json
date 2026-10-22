@@ -952,7 +952,34 @@
           }
          }
         }
-       ]
+       ],
+       "filter": {
+        "name": "不是新的四張",
+        "conditions": [
+         [
+          {
+           "a": "{{36.richMenuId}}",
+           "o": "text:notequal",
+           "b": "{{12.richMenuId}}"
+          },
+          {
+           "a": "{{36.richMenuId}}",
+           "o": "text:notequal",
+           "b": "{{14.richMenuId}}"
+          },
+          {
+           "a": "{{36.richMenuId}}",
+           "o": "text:notequal",
+           "b": "{{16.richMenuId}}"
+          },
+          {
+           "a": "{{36.richMenuId}}",
+           "o": "text:notequal",
+           "b": "{{18.richMenuId}}"
+          }
+         ]
+        ]
+       }
       }
      ]
     },

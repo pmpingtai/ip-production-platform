@@ -270,7 +270,13 @@ function renderApprove() {
 const plain = (v) => (Array.isArray(v) ? v.map((x) => x.plain_text ?? x.text?.content ?? '').join('') : v?.name ?? (typeof v === 'string' ? v : ''));
 const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const SAVE_STATUSES = ['尚未開始', '執行創作中', '待審核'];
-const VERSIONS = ['V1', 'V2', 'V3', 'V4', 'V5'];
+// 和 Make 的規則相同（tools/make_blueprints.py 的 version_v）：第一次送審沿用或從 V1 開始，之後每次送審加一
+function nextVersion(t) {
+  if (!t.submittedAt || t.status === '待審核' || t.version === '最終定案') return t.version || 'V1';
+  const n = Number((t.version || 'V0').slice(1));
+  return Number.isInteger(n) && n < 30 ? `V${n + 1}` : t.version;
+}
+const nextVersionHint = (t) => (t.status === '待審核' ? `維持 ${nextVersion(t)}` : `會記為 ${nextVersion(t)}`);
 const MAX_FILE = 3 * 1024 * 1024;   // Make webhook 一次最多約 5MB，base64 會變大三分之一
 
 function parseDetail(r) {
@@ -332,10 +338,9 @@ function renderTask() {
   }
   if (canEdit) {
     const status = SAVE_STATUSES.includes(t.status) ? t.status : '執行創作中';
-    const nextVersion = t.status === '退回修改' && t.version ? VERSIONS[Math.min(VERSIONS.indexOf(t.version) + 1, 4)] : t.version || 'V1';
     html.push(`<section class="card"><h2>${t.status === '退回修改' ? '修改後重新交件' : '交件與進度'}</h2>
       <label class="f">狀態<select id="sStatus">${SAVE_STATUSES.map((s) => `<option ${s === status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
-      <label class="f">版本號<select id="sVersion">${VERSIONS.map((v) => `<option ${v === nextVersion ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <p class="empty">版本號與送審時間由系統自動處理：送審時${nextVersionHint(t)}。</p>
       <label class="f">雲端硬碟連結<input id="sLink" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(t.link)}"></label>
       <label class="f">上傳檔案（照片會自動縮小；其他檔案 3MB 以內，大檔請放雲端貼連結）
         <input id="sFile" type="file"></label>
@@ -408,7 +413,7 @@ async function readFile(file) {
 async function saveTask() {
   const d = S.detail;
   const f = {
-    id: d.id, status: $('#sStatus').value, version: $('#sVersion').value,
+    id: d.id, status: $('#sStatus').value,
     link: $('#sLink').value.trim(), note: $('#sNote').value.trim(),
   };
   if (f.link && !/^https:\/\//.test(f.link)) return toast('連結要以 https:// 開頭');
@@ -462,11 +467,11 @@ document.addEventListener('change', async (e) => {
   if (e.target.id === 'project') { S.projectId = e.target.value; render(); }
   if (e.target.id === 'sFile' && e.target.files[0]) {
     // 換畫面前先記下其他欄位，重畫後才不會被清掉
-    const keep = { status: $('#sStatus').value, version: $('#sVersion').value, link: $('#sLink').value, note: $('#sNote').value };
+    const keep = { status: $('#sStatus').value, link: $('#sLink').value, note: $('#sNote').value };
     try { S.detail.file = await readFile(e.target.files[0]); }
     catch (x) { toast(x.message === 'too_big' ? '檔案超過 3MB，請放到雲端硬碟後貼連結' : '這個檔案讀不到'); return; }
     render();
-    $('#sStatus').value = keep.status; $('#sVersion').value = keep.version; $('#sLink').value = keep.link; $('#sNote').value = keep.note;
+    $('#sStatus').value = keep.status; $('#sLink').value = keep.link; $('#sNote').value = keep.note;
   }
 });
 document.addEventListener('click', async (e) => {

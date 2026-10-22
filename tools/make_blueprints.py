@@ -428,18 +428,28 @@ def build_api():
             forbidden("回傳沒有權限（任務明細）")]),
     ])]
 
-    # ---- save：交件。可改狀態（不能自己核准）、版本、雲端連結、留言、上傳一個檔案；送審時通知導演與製作人 ----
+    # ---- save：交件。可改狀態（不能自己核准）、雲端連結、留言、上傳一個檔案；送審時通知導演與製作人 ----
+    # 時間（提交時間、實際交付日）與版本號都由系統寫入，頁面不送
     SAVE_STATUSES = ["尚未開始", "執行創作中", "待審核"]
     EXTS = ["jpg", "jpeg", "png", "gif", "webp", "heic", "pdf", "mp4", "mov", "mp3", "wav", "m4a", "zip",
             "psd", "ai", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt"]
     status_v = pick("1.status", SAVE_STATUSES, '"執行創作中"')
-    version_v = pick("1.version", ["V1", "V2", "V3", "V4", "V5"], "null")
     # Make 沒有 startsWith，用 indexOf = 0 判斷開頭
     link_v = '{{if(indexOf(1.link; "https://") = 0; substring(1.link; 0; 500); "")}}'
     note_v = cut("1.note", 1000)
     submit = 'if(1.status = "待審核"; '
     g2, G2, own2 = read_task("交件")
     task_name = sp(G2, "任務名稱", "[].plain_text")
+    # 版本號：同一個工作項目每次送審自動加一。
+    #   第一次送審：沿用 Notion 上已有的版本（之前手動填過的），沒有就是 V1
+    #   之後再送審（已有提交時間、目前不是待審核）：下一號；待審核時重存只改內容，不跳號
+    #   「最終定案」或超過 V30 就不再變動；其他儲存（沒有送審）不改版本
+    cur = inner(sp(G2, "版本號", ".name"))
+    nxt = "switch(ifempty(" + cur + '; "V0"); ' + "; ".join(f'"V{i}"; "V{i + 1}"' for i in range(30)) + "; " + cur + ")"
+    first = "ifempty(" + inner(sp(G2, "提交時間", ".start")) + '; "") = ""'
+    on_submit = ("if(" + first + "; ifempty(" + cur + '; "V1"); if(' + inner(sp(G2, "狀態", ".name"))
+                 + ' = "待審核"; ifempty(' + cur + '; "V1"); ' + nxt + "))")
+    version_v = "{{" + submit + on_submit + "; " + cur + ")}}"
 
     def save_route(label, file_link):
         approvers = b.search(f"找製作人與導演（送審通知，{label}）", DS_MEMBER,

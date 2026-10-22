@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMine, buildTeam, makeRoleMap, normalizeTask, weekRange, UNMAPPED } from '../liff/app/stats.js';
+import { buildMine, buildTeam, filterLabel, filterTasks, makeRoleMap, normalizeTask, weekRange, UNMAPPED } from '../liff/app/stats.js';
 
 const roles = JSON.parse(readFileSync(new URL('../liff/app/roles.json', import.meta.url), 'utf8'));
 const roleOf = makeRoleMap(roles);
@@ -45,6 +45,22 @@ test('我的工作：只算自己的任務，逾期與本週不重複', () => {
   assert.equal(v.summary.thisWeek, 1);
   assert.equal(v.lists.thisWeek.length, 1);
   assert.equal(v.summary.percent, 33);
+});
+
+test('從進度頁的數字篩選：狀態、階段、逾期、本週到期（已核准不算逾期）', () => {
+  const tasks = [
+    task({ status: '已核准', due: '2026-10-20' }),
+    task({ status: '待審核', due: '2026-10-20', stage: '1 企劃階段' }),
+    task({ status: '執行創作中', due: '2026-10-23' }),
+    task({ status: '執行創作中', due: '2026-11-30' }),
+  ];
+  const today = '2026-10-21';
+  assert.equal(filterTasks(tasks, 'status:執行創作中', today).length, 2);
+  assert.equal(filterTasks(tasks, 'stage:1 企劃階段', today).length, 1);
+  assert.equal(filterTasks(tasks, 'overdue', today).length, 1);
+  assert.equal(filterTasks(tasks, 'thisWeek', today).length, 1);
+  assert.equal(filterTasks(tasks, 'bogus', today).length, 0);
+  assert.deepEqual([filterLabel('status:待審核'), filterLabel('overdue'), filterLabel('stage:2 前期製作')], ['待審核', '已逾期', '2 前期製作']);
 });
 
 test('團隊進度：可切換組別，並列出未對應的任務', () => {

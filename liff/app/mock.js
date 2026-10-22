@@ -67,14 +67,14 @@
       await wait(f.file ? 1200 : 500);
       const t = find(f.id), p = t.properties_value;
       if (!ownRoles().includes(p.執行職掌?.name) || p.狀態?.name === '已核准') throw err('locked');
-      const fileUrl = f.file ? `https://drive.google.com/file/d/mock-${Date.now()}/view` : '';
+      const fileUrl = f.file ? `https://drive.google.com/file/d/mock-file-${Date.now()}/view` : '';
       // 版本號由系統決定（同 Make）：第一次送審沿用或 V1，之後每次送審加一
       let version = p.版本號?.name || '';
       if (f.status === '待審核') {
         const n = Number((version || 'V0').slice(1));
         version = !p.提交時間 || p.狀態?.name === '待審核' ? version || 'V1' : `V${n + 1}`;
       }
-      Object.assign(p, { 狀態: sel(f.status), 版本號: sel(version), 交付雲端連結: f.link, 執行者留言: rt(f.note) });
+      Object.assign(p, { 狀態: sel(f.status), 版本號: sel(version), 交付雲端連結: f.link, ...(f.note ? { 執行者留言: rt(f.note) } : {}) });
       if (fileUrl) p.交付檔案上傳 = [{ name: `${p.序號 || 'task'}.${f.ext}`, url: fileUrl }];
       if (f.status === '待審核') Object.assign(p, { 提交人: rt(me.name), 提交時間: { start: new Date().toISOString() } });
       log(f.id, f.status === '待審核' ? '送審' : '改狀態', f.status, version, f.note, f.link, fileUrl);

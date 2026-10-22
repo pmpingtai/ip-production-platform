@@ -3794,7 +3794,7 @@
                      {
                       "key": "執行者留言",
                       "type": "rich_text",
-                      "value": "{{substring(1.note; 0; 1000)}}"
+                      "value": "{{ifempty(substring(1.note; 0; 1000); join(map(197.properties_value.`執行者留言`; \"plain_text\"); \"\"))}}"
                      },
                      {
                       "key": "提交人",
@@ -3983,7 +3983,7 @@
                      {
                       "key": "執行者留言",
                       "type": "rich_text",
-                      "value": "{{substring(1.note; 0; 1000)}}"
+                      "value": "{{ifempty(substring(1.note; 0; 1000); join(map(197.properties_value.`執行者留言`; \"plain_text\"); \"\"))}}"
                      },
                      {
                       "key": "提交人",

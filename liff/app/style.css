@@ -105,7 +105,15 @@ h1 { font-size: 20px; margin-top: 6px; }
 .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+.tile { display: block; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+/* 可以點的數字：點了列出那些工作 */
+.pickable { cursor: pointer; }
+.pickable:active { background: var(--accent-bg); }
+button.tile b::after { content: " ›"; font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.legend button { padding: 2px 0; border-bottom: 1px dashed var(--ink-3); }
+.hero button.sub { border-bottom: 1px dashed var(--ink-3); padding: 0; }
+button.stage { display: block; width: 100%; text-align: left; padding: 2px 0; }
+.filter-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .tile b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
 .tile span { font-size: 12px; color: var(--ink-2); }
 .tile.warn b { color: var(--s-returned); }
@@ -196,7 +204,30 @@ dt { color: var(--ink-2); }
 .check { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--paper); font-size: 13px; color: var(--ink-2); white-space: pre-wrap; }
 .links-inline { display: flex; flex-wrap: wrap; gap: 8px; }
 .links-inline a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: var(--accent); text-decoration: none; font-size: 14px; overflow-wrap: anywhere; }
-.quote { margin-top: 10px; padding: 8px 12px; border-left: 3px solid var(--line); white-space: pre-wrap; font-size: 14px; }
+.quote { margin-top: 8px; padding: 8px 12px; border-left: 3px solid var(--line); white-space: pre-wrap; font-size: 14px; background: var(--paper); border-radius: 0 8px 8px 0; }
+/* 目前進度：左邊色條跟著狀態 */
+.card.now { border-left: 4px solid var(--s-todo); }
+.card.now[data-s="執行創作中"] { border-left-color: var(--s-doing); }
+.card.now[data-s="待審核"] { border-left-color: var(--s-review); }
+.card.now[data-s="退回修改"] { border-left-color: var(--s-returned); }
+.card.now[data-s="已核准"] { border-left-color: var(--s-done); }
+.card.now p + p { margin-top: 6px; }
+.compare { display: grid; gap: 4px; }
+/* 交付檔案縮圖 */
+.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+.thumb { display: block; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-decoration: none; color: var(--accent); background: var(--paper); }
+.thumb img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--line); }
+.thumb span { display: block; padding: 4px 8px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thumb.no-img span::before { content: "📎 "; }
+.file-link { align-self: center; color: var(--accent); font-size: 14px; overflow-wrap: anywhere; }
+/* 修改歷程：一版一組 */
+details.round { border-top: 1px solid var(--line); padding: 8px 0; }
+details.round:first-of-type { border-top: 0; padding-top: 0; }
+details.round summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.round summary::-webkit-details-marker { display: none; }
+details.round summary::after { content: "＋"; margin-left: auto; color: var(--ink-3); }
+details.round[open] summary::after { content: "－"; }
+details.round .log { margin-top: 8px; padding-left: 4px; }
 .quote b { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; }
 .quote.warn { border-color: var(--s-returned); background: color-mix(in srgb, var(--s-returned) 8%, var(--card)); }
 .review-card { border-color: color-mix(in srgb, var(--s-review) 55%, var(--line)); }

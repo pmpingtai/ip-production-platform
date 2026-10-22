@@ -106,6 +106,26 @@ function byStatus(tasks) {
   );
 }
 
+// 從進度頁的數字點進來的篩選：status:<狀態>、stage:<階段>、overdue、thisWeek
+export function filterLabel(key) {
+  if (!key) return '';
+  const [kind, value] = key.split(':');
+  return { status: value, stage: value, overdue: '已逾期', thisWeek: '本週到期' }[kind] || '';
+}
+
+export function filterTasks(tasks, key, today = taipeiToday()) {
+  const [kind, value] = String(key || '').split(':');
+  const week = weekRange(today);
+  const open = (t) => t.status !== DONE;
+  const test = {
+    status: (t) => t.status === value,
+    stage: (t) => t.stage === value,
+    overdue: (t) => open(t) && t.due && t.due < today,
+    thisWeek: (t) => open(t) && t.due && t.due >= today && t.due <= week.end,
+  }[kind];
+  return test ? tasks.filter(test).sort(byDue) : [];
+}
+
 // 我的工作／我的進度：只算執行職掌對應到 role 的任務
 export function buildMine({ tasks, role, roleOf, projectId, today = taipeiToday() }) {
   const week = weekRange(today);
@@ -113,6 +133,7 @@ export function buildMine({ tasks, role, roleOf, projectId, today = taipeiToday(
   return {
     today,
     week,
+    tasks: mine,
     summary: summarize(mine, today, week),
     lists: lists(mine, today, week),
     stages: byStage(mine, today, week),
@@ -132,6 +153,7 @@ export function buildTeam({ tasks, roles, roleOf, projectId, group = '全部', t
     today,
     week,
     group,
+    tasks: shown,
     summary: summarize(shown, today, week),
     lists: lists(shown, today, week),
     stages: byStage(shown, today, week),

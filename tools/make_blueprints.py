@@ -478,7 +478,9 @@ def build_api():
         return [
             b.update(f"更新任務（{label}）", f"{{{{{G2}.id}}}}", [
                 fv("狀態", "select", status_v), fv("版本號", "select", version_v), fv("交付雲端連結", "url", link_v),
-                fv("執行者留言", "rich_text", note_v),
+                # 頁面的說明欄每次都是空的（寫這一次的說明）；沒寫就保留 Notion 上原本的留言
+                fv("執行者留言", "rich_text", "{{ifempty(" + inner(note_v) + "; join(map(" + str(G2)
+                   + '.properties_value.`執行者留言`; "plain_text"); ""))}}'),
                 fv("提交人", "rich_text", "{{" + submit + inner(w_name) + '; "")}}'),
                 now("提交時間", "{{" + submit + 'now; "")}}'),
                 {"key": "實際交付日", "type": "date", "date": {"start": "{{" + submit + 'formatDate(now; "YYYY-MM-DD"); "")}}'}}],

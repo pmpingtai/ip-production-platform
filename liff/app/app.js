@@ -1,4 +1,4 @@
-import { buildMine, buildTeam, makeRoleMap, normalizeProject, normalizeTask } from './stats.js';
+import { buildMine, buildTeam, filterLabel, filterTasks, makeRoleMap, normalizeProject, normalizeTask } from './stats.js';
 
 // ===== 設定：LIFF ID 與 API 網址。正式網址（GitHub Pages）一律用真資料；本機預覽才載入 mock.js =====
 // 所有畫面都送到 Make 情境「風雅存｜LIFF API」，欄位 a 是動作：
@@ -50,6 +50,8 @@ const S = {
   view: VIEWS.includes(params.get('v')) ? params.get('v') : null,
   roles: null, roleOf: null,
   me: null, tasks: null, projects: null, projectId: null, group: '全部',
+  // 從進度頁點數字帶過來的篩選（見 stats.js 的 filterTasks）
+  filter: params.get('f') || null,
   pending: null, form: { name: '', role: '', note: '' }, busy: false, editing: false,
   // 任務明細：id、從哪個畫面點進來（返回用）、讀回的資料、上傳中的檔案
   detail: { id: params.get('id'), from: null, data: null, file: null },
@@ -71,10 +73,13 @@ function statusBar(counts, total, slim = false) {
     .map((s) => `<span style="width:${(counts[s] / total) * 100}%;background:var(${STATUS_VAR[s]})"></span>`).join('');
   return `<div class="${cls}" role="img" aria-label="${BAR_ORDER.map((s) => `${s} ${counts[s]}`).join('、')}">${parts}</div>`;
 }
-const legend = (counts) => `<div class="legend">${BAR_ORDER.map(
-  (s) => `<span><i style="background:var(${STATUS_VAR[s]})"></i>${s} ${counts[s]}</span>`).join('')}</div>`;
-const tiles = (items) => `<div class="tiles">${items.map(([label, n, tone]) =>
-  `<div class="tile ${n ? tone || '' : 'zero'}"><b>${n}</b><span>${label}</span></div>`).join('')}</div>`;
+// 數字都可以點：帶 data-filter，點了列出那些工作（0 的不能點）
+const pick = (key, n, inner, cls = '') =>
+  (n ? `<button class="${cls} pickable" data-filter="${esc(key)}">${inner}</button>` : `<span class="${cls}">${inner}</span>`);
+const legend = (counts) => `<div class="legend">${BAR_ORDER.map((s) =>
+  pick(`status:${s}`, counts[s], `<i style="background:var(${STATUS_VAR[s]})"></i>${s} ${counts[s]}`)).join('')}</div>`;
+const tiles = (items) => `<div class="tiles">${items.map(([label, n, tone, key]) =>
+  pick(key, n, `<b>${n}</b><span>${label}</span>`, `tile ${n ? tone || '' : 'zero'}`)).join('')}</div>`;
 
 function taskList(tasks, { showRole = false, today } = {}) {
   if (!tasks.length) return '<p class="empty">沒有項目</p>';
@@ -89,12 +94,19 @@ function taskList(tasks, { showRole = false, today } = {}) {
 const listCard = (title, tasks, opts) =>
   `<section class="card"><h2>${title}<span class="count">${tasks.length}</span></h2>${taskList(tasks, opts)}</section>`;
 const progressCard = (title, s) => `<section class="card"><h2>${title}</h2>
-  <div class="hero"><span class="pct">${s.percent}%</span><span class="sub">已核准 ${s.done} / 共 ${s.total} 項</span></div>
+  <div class="hero"><span class="pct">${s.percent}%</span>${pick('status:已核准', s.done, `已核准 ${s.done} / 共 ${s.total} 項`, 'sub')}</div>
   ${statusBar(s.counts, s.total)}${legend(s.counts)}</section>`;
-const stageRows = (stages) => `<div class="rows">${stages.map((g) => `<div>
-  <div class="row-head"><span class="r-name">${esc(g.stage)}</span>
+const stageRows = (stages) => `<div class="rows">${stages.map((g) => `<button class="stage pickable" data-filter="${esc(`stage:${g.stage}`)}">
+  <div class="row-head"><span class="r-name">${esc(g.stage)} ›</span>
   <span class="r-nums">${g.done}/${g.total}${g.overdue ? ` · <span class="alert">逾期 ${g.overdue}</span>` : ''}</span></div>
-  ${statusBar(g.counts, g.total, true)}</div>`).join('')}</div>`;
+  ${statusBar(g.counts, g.total, true)}</button>`).join('')}</div>`;
+// 篩選後的清單：上方標出條件，可以一鍵回到全部
+function filteredView(v, { showRole = false } = {}) {
+  const list = filterTasks(v.tasks, S.filter, v.today);
+  return [`<section class="card filter-bar"><span>篩選：<b>${esc(filterLabel(S.filter))}</b>・${list.length} 項</span>
+      <button class="ghost" data-filter="">顯示全部 ✕</button></section>`,
+    list.length ? `<section class="card">${taskList(list, { today: v.today, showRole })}</section>` : '<p class="empty center">沒有符合的工作</p>'];
+}
 
 function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
@@ -180,9 +192,14 @@ function renderWork() {
   const v = buildMine({ tasks: S.tasks, role: S.me.role, roleOf: S.roleOf, projectId: S.projectId });
   const opts = { today: v.today };
   const html = [tiles([
-    ['本週到期', v.summary.thisWeek, 'review'], ['已逾期', v.summary.overdue, 'warn'],
-    ['退回修改', v.summary.counts['退回修改'], 'warn'], ['待審核', v.summary.counts['待審核'], 'review'],
+    ['本週到期', v.summary.thisWeek, 'review', 'thisWeek'], ['已逾期', v.summary.overdue, 'warn', 'overdue'],
+    ['退回修改', v.summary.counts['退回修改'], 'warn', 'status:退回修改'], ['待審核', v.summary.counts['待審核'], 'review', 'status:待審核'],
   ])];
+  if (S.filter) {
+    $('#app').innerHTML = [html[0], ...filteredView(v)].join('');
+    setFoot(v);
+    return;
+  }
   if (v.lists.returned.length) html.push(listCard('退回修改・請重新提交', v.lists.returned, opts));
   if (v.lists.overdue.length) html.push(listCard('已逾期', v.lists.overdue, opts));
   html.push(listCard('本週到期', v.lists.thisWeek, opts));
@@ -198,8 +215,8 @@ function progressBody(v, { showRole = false } = {}) {
   return [
     progressCard(v.group && v.group !== '全部' ? `${v.group}的進度` : showRole ? '團隊進度' : '我的進度', v.summary),
     tiles([
-      ['執行中', v.summary.counts['執行創作中'], ''], ['待審核', v.summary.counts['待審核'], 'review'],
-      ['退回修改', v.summary.counts['退回修改'], 'warn'], ['已逾期', v.summary.overdue, 'warn'],
+      ['執行中', v.summary.counts['執行創作中'], '', 'status:執行創作中'], ['待審核', v.summary.counts['待審核'], 'review', 'status:待審核'],
+      ['退回修改', v.summary.counts['退回修改'], 'warn', 'status:退回修改'], ['已逾期', v.summary.overdue, 'warn', 'overdue'],
     ]),
     `<section class="card"><h2>各階段</h2>${stageRows(v.stages)}</section>`,
     ...v.statuses.map((g) => `<details class="card" ${g.status === '退回修改' || g.status === '待審核' ? 'open' : ''}>
@@ -222,6 +239,12 @@ function renderTeam() {
   $('#tabs').innerHTML = groups.map((g) => `<button data-group="${g}" aria-pressed="${g === S.group}">${g}</button>`).join('');
   $('#tabs').hidden = false;
   const v = buildTeam({ tasks: S.tasks, roles: S.roles, roleOf: S.roleOf, projectId: S.projectId, group: S.group });
+  // 團隊進度點數字：留在團隊進度，用目前的組別篩選
+  if (S.filter) {
+    $('#app').innerHTML = filteredView(v, { showRole: S.group === '全部' }).join('');
+    setFoot(v);
+    return;
+  }
   const html = progressBody(v, { showRole: S.group === '全部' });
   if (S.group === '全部') {
     const roleRows = `<div class="rows">${v.roles.map((r) => {
@@ -306,6 +329,88 @@ function parseDetail(r) {
 
 const safeUrl = (u) => (/^https:\/\//.test(u || '') ? u : '');
 
+// ---- 交付檔案：雲端硬碟的檔案顯示縮圖（圖片、PDF、影片都有），讀不到縮圖就只留連結 ----
+const driveId = (u) => (String(u || '').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([\w-]{20,})/) || [])[1] || '';
+function fileItem(url, label) {
+  if (!safeUrl(url)) return '';
+  const id = driveId(url);
+  if (!id) return `<a class="file-link" href="${esc(url)}" target="_blank" rel="noopener">🔗 ${esc(label)}</a>`;
+  return `<a class="thumb" href="${esc(url)}" target="_blank" rel="noopener">
+    <img src="https://drive.google.com/thumbnail?id=${esc(id)}&sz=w480" alt="${esc(label)}" loading="lazy" referrerpolicy="no-referrer">
+    <span>${esc(label)}</span></a>`;
+}
+const deliverables = (items) => {
+  const html = items.map(([u, label]) => fileItem(u, label)).filter(Boolean);
+  return html.length ? `<div class="files">${html.join('')}</div>` : '';
+};
+// 縮圖讀不到（沒有權限、不是圖片）時換成文字連結
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName === 'IMG' && img.closest('.thumb')) { img.closest('.thumb').classList.add('no-img'); img.remove(); }
+}, true);
+
+const quote = (label, text, cls = '') => `<div class="quote ${cls}"><b>${label}</b>${esc(text) || '<span class="muted">（沒有寫）</span>'}</div>`;
+const who = (role, name) => [role, name].filter(Boolean).join(' ');
+const ACTION_ICON = { 送審: '📤', 退回: '↩️', 核准: '✅', 改狀態: '✏️' };
+
+// 審核紀錄依版本分組（新版本在上，同一版內依時間順序），一眼看出每一版「怎麼交、怎麼被審」
+function rounds(logs) {
+  const map = new Map();
+  for (const l of logs) {   // logs 由新到舊
+    const k = l.version || '—';
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).unshift(l);
+  }
+  return [...map].map(([version, items]) => {
+    const last = items[items.length - 1];
+    const result = { 核准: '已核准', 退回: '退回修改', 送審: '待審核' }[last.action] || '製作中';
+    return { version, items, result };
+  });
+}
+
+// 最上方「目前進度」：用一句話說明現在輪到誰、要做什麼；送審時把上一版的審核意見和這一版的說明放在一起
+function statusCard(t) {
+  const lastReturn = t.logs.find((l) => l.action === '退回');
+  const lastSubmit = t.logs.find((l) => l.action === '送審');
+  const prevReturn = lastReturn && lastReturn.version !== t.version ? lastReturn : null;
+  const parts = [];
+  if (t.status === '待審核') {
+    parts.push(t.own
+      ? `<p>你已送審 <b>${esc(t.version)}</b>（${fmtTime(t.submittedAt)}），等導演或製作人審核。</p>`
+      : `<p><b>${esc(t.submitter)}</b> 在 ${fmtTime(t.submittedAt)} 送審 <b>${esc(t.version)}</b>${isApprover() ? '，請審核。' : '。'}</p>`);
+    if (prevReturn) {
+      parts.push(`<div class="compare">${quote(`上一版 ${esc(prevReturn.version)} 的審核意見・${esc(who(prevReturn.role, prevReturn.name))}`, prevReturn.note, 'warn')}
+        ${quote(`這一版 ${esc(t.version)} 的說明・${esc(lastSubmit?.name || t.submitter)}`, lastSubmit?.note || '')}</div>`);
+    } else if (lastSubmit?.note) {
+      parts.push(quote(`送審說明・${esc(lastSubmit.name)}`, lastSubmit.note));
+    }
+  } else if (t.status === '退回修改') {
+    parts.push(`<p><b>${esc(t.version)}</b> 被 ${esc(t.reviewer)} 退回（${fmtTime(t.reviewedAt)}）。</p>`, quote('審核意見', t.comment, 'warn'));
+    if (t.own) parts.push(`<p class="muted">修改後，狀態選「待審核」儲存即可再送審，會記為 <b>${esc(nextVersion(t))}</b>。</p>`);
+  } else if (t.status === '已核准') {
+    parts.push(`<p><b>${esc(t.version)}</b> 已由 ${esc(t.reviewer)} 核准（${fmtTime(t.reviewedAt)}）。</p>`);
+    if (t.comment) parts.push(quote('審核意見', t.comment));
+  } else if (lastReturn) {
+    parts.push(`<p>${esc(lastReturn.version)} 被退回後修改中（${esc(t.status)}）。</p>`, quote(`上一次的審核意見・${esc(who(lastReturn.role, lastReturn.name))}`, lastReturn.note, 'warn'));
+  } else {
+    parts.push(`<p>還沒送審（${esc(t.status)}）。</p>`);
+    if (t.own) parts.push(`<p class="muted">上傳檔案或貼雲端連結，狀態選「待審核」儲存就會送審，記為 <b>${esc(nextVersion(t))}</b>。</p>`);
+  }
+  return `<section class="card now" data-s="${esc(t.status)}"><h2>目前進度</h2>${parts.join('')}</section>`;
+}
+
+function historyCard(t) {
+  if (!t.logs.length) return '';
+  return `<section class="card"><h2>修改歷程<span class="count">${rounds(t.logs).length} 版</span></h2>${rounds(t.logs).map((r, i) => `
+    <details class="round" ${i < 2 ? 'open' : ''}><summary><b>${esc(r.version)}</b> <span class="chip" data-s="${esc(r.result)}">${esc(r.result)}</span></summary>
+    <ol class="log">${r.items.map((l) => {
+      const review = l.action === '核准' || l.action === '退回';
+      return `<li><div>${ACTION_ICON[l.action] || '•'} <b>${esc(l.action)}</b> ${esc(who(l.role, l.name))} <small class="muted">${fmtTime(l.time)}</small></div>
+        ${l.note ? quote(review ? '審核意見' : '說明', l.note, l.action === '退回' ? 'warn' : '') : ''}
+        ${deliverables([[l.file, '上傳的檔案'], [l.link, '雲端連結']])}</li>`;
+    }).join('')}</ol></details>`).join('')}</section>`;
+}
+
 function renderTask() {
   const d = S.detail;
   const back = `<button class="ghost" id="back">← 返回${TITLES[d.from] || ''}</button>`;
@@ -313,25 +418,18 @@ function renderTask() {
   const t = d.data;
   const canEdit = t.own && t.status !== '已核准';
   const canReview = isApprover() && t.status === '待審核';
-  const deliver = [
-    t.link && safeUrl(t.link) ? `<a href="${esc(t.link)}" target="_blank" rel="noopener">🔗 雲端連結</a>` : '',
-    ...t.files.filter((f) => safeUrl(f.url)).map((f) => `<a href="${esc(f.url)}" target="_blank" rel="noopener">📎 ${esc(f.name)}</a>`),
-  ].filter(Boolean);
+  const current = deliverables([...t.files.map((f) => [f.url, f.name]), [t.link, '雲端連結']]);
   const html = [back, `<section class="card">
     <div class="row-head"><span class="chip" data-s="${esc(t.status)}">${esc(t.status)}</span><span class="r-nums">${esc(t.version || '尚無版本')}</span></div>
     <h1 class="t-title">${esc(t.name)}</h1>
     <p class="lead">${esc([t.stage, t.workflow, t.executor].filter(Boolean).join(' · '))}</p>
-    <dl><dt>預計交付</dt><dd>${fmtDate(t.due)}</dd>
-    ${t.submitter ? `<dt>最後送審</dt><dd>${esc(t.submitter)}・${fmtTime(t.submittedAt)}</dd>` : ''}
-    ${t.reviewer ? `<dt>最後審核</dt><dd>${esc(t.reviewer)}・${fmtTime(t.reviewedAt)}</dd>` : ''}</dl>
+    <dl><dt>預計交付</dt><dd>${fmtDate(t.due)}</dd></dl>
     ${t.check ? `<p class="check">${esc(t.check)}</p>` : ''}
-  </section>`];
-  html.push(`<section class="card"><h2>交付內容</h2>${deliver.length ? `<div class="links-inline">${deliver.join('')}</div>` : '<p class="empty">還沒有交付檔案或連結</p>'}
-    ${t.note ? `<p class="quote"><b>執行者留言</b>${esc(t.note)}</p>` : ''}
-    ${t.comment ? `<p class="quote ${t.status === '退回修改' ? 'warn' : ''}"><b>審核意見</b>${esc(t.comment)}</p>` : ''}</section>`);
+  </section>`, statusCard(t)];
+  html.push(`<section class="card"><h2>目前交付${t.version ? `・${esc(t.version)}` : ''}</h2>${current || '<p class="empty">還沒有交付檔案或連結</p>'}</section>`);
   if (canReview) {
-    html.push(`<section class="card review-card"><h2>審核</h2>
-      <label class="f">審核意見（退回時必填）<textarea id="rComment" maxlength="1000" placeholder="例如：角色比例再修正，背景色調偏冷"></textarea></label>
+    html.push(`<section class="card review-card"><h2>審核 ${esc(t.version)}</h2>
+      <label class="f">審核意見（退回時必填，會留在修改歷程讓下一版對照）<textarea id="rComment" maxlength="1000" placeholder="例如：角色比例再修正，背景色調偏冷"></textarea></label>
       <div class="actions2"><button class="btn ok" data-review="approve" ${d.busy ? 'disabled' : ''}>核准</button>
         <button class="btn no" data-review="return" ${d.busy ? 'disabled' : ''}>退回修改</button></div>
       <p class="empty">送出後會記下你的身分（${esc(S.me.role)}）與姓名。</p></section>`);
@@ -345,21 +443,24 @@ function renderTask() {
       <label class="f">上傳檔案（照片會自動縮小；其他檔案 3MB 以內，大檔請放雲端貼連結）
         <input id="sFile" type="file"></label>
       ${d.file ? `<p class="empty">已選擇：${esc(d.file.label)}</p>` : ''}
-      <label class="f">留言給導演／製作人<textarea id="sNote" maxlength="1000">${esc(t.note)}</textarea></label>
+      <label class="f">這次的說明（改了哪裡、想請導演或製作人看什麼）
+        <textarea id="sNote" maxlength="1000" placeholder="${t.status === '退回修改' ? '例如：依意見把角色比例調高，背景改暖色' : '例如：先交三款造型，想確認方向'}"></textarea></label>
     </section>`);
     $('#bar').hidden = false;
     $('#barIn').innerHTML = `<button class="primary" id="saveTask" ${d.busy ? 'disabled' : ''}>${d.busy ? '儲存中…' : '儲存'}</button>`;
   } else if (t.own && t.status === '已核准') {
     html.push('<p class="empty center">這項工作已核准，不能再修改。需要修改請洽導演或製作人。</p>');
   }
-  if (t.logs.length) {
-    html.push(`<section class="card"><h2>紀錄<span class="count">${t.logs.length}</span></h2><ul class="log">${t.logs.map((l) => `<li>
-      <div><span class="chip" data-s="${esc(l.status)}">${esc(l.action)}</span> <b>${esc(l.role)} ${esc(l.name)}</b> <small class="muted">${fmtTime(l.time)}${l.version ? `・${esc(l.version)}` : ''}</small></div>
-      ${l.note ? `<p>${esc(l.note)}</p>` : ''}
-      ${safeUrl(l.link) ? `<a href="${esc(l.link)}" target="_blank" rel="noopener">🔗 連結</a> ` : ''}${safeUrl(l.file) ? `<a href="${esc(l.file)}" target="_blank" rel="noopener">📎 上傳的檔案</a>` : ''}
-    </li>`).join('')}</ul></section>`);
-  }
+  html.push(historyCard(t));
   $('#app').innerHTML = html.join('');
+}
+
+// 我的進度點數字 → 到我的工作看那些工作；我的工作、團隊進度點數字 → 原畫面篩選。key 空字串＝取消篩選
+function applyFilter(key) {
+  S.filter = key || null;
+  if (S.filter && S.view === 'progress') S.view = 'work';
+  setUrl({ v: S.view, f: S.filter });
+  render(); scrollTo(0, 0);
 }
 
 // 換畫面時改網址（保留 as、project 等其他參數），重新整理會停在同一個畫面
@@ -477,6 +578,8 @@ document.addEventListener('change', async (e) => {
 document.addEventListener('click', async (e) => {
   const tab = e.target.closest('[data-group]');
   if (tab) { S.group = tab.dataset.group; render(); scrollTo(0, 0); return; }
+  const fb = e.target.closest('[data-filter]');
+  if (fb) return applyFilter(fb.dataset.filter);
   const item = e.target.closest('[data-task]');
   if (item && !e.target.closest('a')) return openTask(item.dataset.task);
   const t = e.target.closest('button');

@@ -7,7 +7,9 @@
     "api_hook_id": 0,
     "events_hook_id": 0,
     "notion_connection_id": 0,
-    "line_connection_id": 0
+    "line_connection_id": 0,
+    "drive_connection_id": 0,
+    "drive_folder_id": "交件檔案的雲端硬碟資料夾 ID（設成知道連結的人都能檢視）"
   },
   "line": {
     "login_channel_id": "LINE Login channel 的 Channel ID",
@@ -16,7 +18,9 @@
   "notion": {
     "members_ds": "👥 LINE 團隊成員 的 data source ID",
     "tasks_ds": "📋 製作流程查核總表 的 data source ID",
-    "projects_ds": "📁 風雅存_專案資料庫 的 data source ID"
+    "projects_ds": "📁 風雅存_專案資料庫 的 data source ID",
+    "reviews_ds": "📝 審核紀錄 的 data source ID",
+    "reviews_db": "📝 審核紀錄 的 database ID"
   },
   "pages_base": "https://<GitHub 帳號>.github.io/<repo>",
   "page_origin": "https://<GitHub 帳號>.github.io"

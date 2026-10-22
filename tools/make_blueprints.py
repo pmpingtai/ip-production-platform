@@ -26,10 +26,12 @@ CFG = json.loads((ROOT / "tools" / ("config.example.json" if EXAMPLE else "confi
 ROLES_CFG = json.loads((ROOT / "liff" / "app" / "roles.json").read_text(encoding="utf-8"))
 
 MK, LN, NT = CFG["make"], CFG["line"], CFG["notion"]
-CONN_NOTION, CONN_LINE = MK["notion_connection_id"], MK["line_connection_id"]
+CONN_NOTION, CONN_LINE, CONN_DRIVE = MK["notion_connection_id"], MK["line_connection_id"], MK["drive_connection_id"]
+DRIVE_FOLDER = MK["drive_folder_id"]
 CHANNEL = LN["login_channel_id"]
 LIFF = f"https://liff.line.me/{LN['liff_id']}"
-DS_MEMBER, DS_TASK, DS_PROJECT = NT["members_ds"], NT["tasks_ds"], NT["projects_ds"]
+DS_MEMBER, DS_TASK, DS_PROJECT, DS_REVIEW = NT["members_ds"], NT["tasks_ds"], NT["projects_ds"], NT["reviews_ds"]
+DB_REVIEW = NT["reviews_db"]   # 查審核紀錄用 Notion API（查不到資料時也會回傳空陣列）
 PAGES = CFG["pages_base"].rstrip("/")
 ORIGIN = CFG.get("page_origin") or "*"
 PREFIX = f"{CFG['project']}｜" if CFG.get("project") else ""
@@ -93,8 +95,20 @@ def fv(k, typ, v):
     return {"key": k, "type": typ, "value": v}
 
 
-def now(k):
-    return {"key": k, "type": "date", "date": {"start": "{{now}}", "includeTime": True}}
+def now(k, start="{{now}}"):
+    return {"key": k, "type": "date", "date": {"start": start, "includeTime": True}}
+
+
+def alias_csv(role_expr):
+    """角色 → 這個角色涵蓋的執行職掌（逗號分隔）"""
+    return ("switch(" + inner(role_expr) + "; "
+            + "; ".join(f'"{r}"; "{",".join(ALIASES[r])}"' for r in ROLES) + '; "")')
+
+
+def role_of(executor_expr):
+    """執行職掌 → 角色（舊職稱也對應得到）"""
+    return ("{{switch(" + inner(executor_expr) + "; "
+            + "; ".join(f'"{a}"; "{r}"' for r in ROLES for a in ALIASES[r]) + '; "")}}')
 
 
 def prop(name, typ):
@@ -144,12 +158,25 @@ class B:
     def get(self, name, page, onerror=None):
         return self.notion("getADatabaseItem", name, {"page": page, "getBy": "data_source", "select": "map"}, onerror)
 
-    def create(self, name, fields):
-        return self.notion("createDataSourceItem", name, {"fields": fields, "select": "map", "data_source": DS_MEMBER})
+    def create(self, name, fields, ds=DS_MEMBER):
+        return self.notion("createDataSourceItem", name, {"fields": fields, "select": "map", "data_source": ds})
 
-    def update(self, name, page, fields):
+    def update(self, name, page, fields, ds=DS_MEMBER):
         return self.notion("updateADatabaseItem", name,
-                           {"page": page, "fields": fields, "select": "map", "updateBy": "data_source", "data_source": DS_MEMBER})
+                           {"page": page, "fields": fields, "select": "map", "updateBy": "data_source", "data_source": ds})
+
+    def notion_api(self, name, url, method, body, onerror=None):
+        return self.notion("makeApiCall", name, {
+            "url": url, "method": method, "version": "2022-06-28",
+            "headers": [{"key": "Content-Type", "value": "application/json"}], "qs": [], "body": body}, onerror)
+
+    def drive_upload(self, name, filename, b64_field):
+        return {"id": self.nid(), "module": "google-drive:uploadAFile", "version": 4,
+                "parameters": {"__IMTCONN__": CONN_DRIVE},
+                "mapper": {"select": "map", "folderId": DRIVE_FOLDER, "filename": filename,
+                           "data": "{{toBinary(" + b64_field + "; \"base64\")}}", "convert": False},
+                "metadata": self.meta(name, [{"name": "__IMTCONN__", "type": "account:google-restricted,google-drive",
+                                              "label": "Connection", "required": True}])}
 
     def line(self, name, url, method="GET", body=None, onerror=None):
         mapper = {"url": url, "method": method, "headers": []}
@@ -372,8 +399,126 @@ def build_api():
         (flt("不能退回", bad2), [respond("回傳不能退回", '{"ok":false,"error":"bad_target"}', "409")]),
     ])]
 
+    # ==== 任務明細、交件、審核 ====
+    def read_task(label):
+        g = b.get(f"讀任務（{label}）", "{{1.id}}",
+                  onerror=[respond(f"回傳找不到任務（{label}）", '{"ok":false,"error":"not_found"}', "404"), b.ignore()])
+        G = g["id"]
+        executor = sp(G, "執行職掌", ".name")
+        # 自己的任務：執行職掌對應到自己的角色（導演、製作人自己負責執行的任務也算）
+        own = "{{if(contains(split(" + alias_csv(w_role) + '; ","); ' + inner(executor) + '); "yes"; "no")}}'
+        return g, G, own
+    is_manager = [c(w_role, "text:equal", r) for r in MANAGERS]
+
+    # ---- task：任務明細與審核紀錄。導演、製作人看得到全部；其他人只看得到自己的任務 ----
+    g1, G1, own1 = read_task("明細")
+    logs = b.notion_api("查這個任務的審核紀錄", f"/v1/databases/{DB_REVIEW}/query", "POST", json.dumps({
+        "filter": {"property": "任務", "relation": {"contains": f"{{{{{G1}.id}}}}"}},
+        "sorts": [{"timestamp": "created_time", "direction": "descending"}], "page_size": 30}, ensure_ascii=False))
+    tj = {"id": b.nid(), "module": "json:TransformToJSON", "version": 1, "parameters": {"space": ""},
+          "mapper": {"object": f"{{{{{G1}.properties_value}}}}"}, "metadata": b.meta("任務轉成 JSON")}
+    lj = {"id": b.nid(), "module": "json:TransformToJSON", "version": 1, "parameters": {"space": ""},
+          "mapper": {"object": f"{{{{{logs['id']}.body.results}}}}"}, "metadata": b.meta("審核紀錄轉成 JSON")}
+    task_flow = [g1, b.router("可否查看任務", [
+        (flt("可以查看", [[c(own1, "text:equal", "yes")]] + [[m] for m in is_manager]), [
+            logs, tj, lj,
+            respond("回傳任務明細", '{"ok":true,"id":"' + f"{{{{{G1}.id}}}}" + '","own":"' + own1 + '","task":'
+                    + f"{{{{{tj['id']}.json}}}}" + ',"logs":' + f"{{{{{lj['id']}.json}}}}" + "}")]),
+        (flt("不能查看", [[c(own1, "text:equal", "no")] + [c(w_role, "text:notequal", r) for r in MANAGERS]]), [
+            forbidden("回傳沒有權限（任務明細）")]),
+    ])]
+
+    # ---- save：交件。可改狀態（不能自己核准）、版本、雲端連結、留言、上傳一個檔案；送審時通知導演與製作人 ----
+    SAVE_STATUSES = ["尚未開始", "執行創作中", "待審核"]
+    EXTS = ["jpg", "jpeg", "png", "gif", "webp", "heic", "pdf", "mp4", "mov", "mp3", "wav", "m4a", "zip",
+            "psd", "ai", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt"]
+    status_v = pick("1.status", SAVE_STATUSES, '"執行創作中"')
+    version_v = pick("1.version", ["V1", "V2", "V3", "V4", "V5"], "null")
+    link_v = '{{if(startsWith(1.link; "https://"); substring(1.link; 0; 500); "")}}'
+    note_v = cut("1.note", 1000)
+    submit = 'if(1.status = "待審核"; '
+    g2, G2, own2 = read_task("交件")
+    task_name = sp(G2, "任務名稱", "[].plain_text")
+
+    def save_route(label, file_link):
+        approvers = b.search(f"找製作人與導演（送審通知，{label}）", DS_MEMBER,
+                             [[c(prop("狀態", "select"), "select:equals", "已核准"), c(prop("角色", "select"), "select:equals", r)]
+                              for r in APPROVERS], limit="10")
+        approvers["filter"] = flt("送審才通知", [[c("{{1.status}}", "text:equal", "待審核")]])
+        return [
+            b.update(f"更新任務（{label}）", f"{{{{{G2}.id}}}}", [
+                fv("狀態", "select", status_v), fv("版本號", "select", version_v), fv("交付雲端連結", "url", link_v),
+                fv("執行者留言", "rich_text", note_v),
+                fv("提交人", "rich_text", "{{" + submit + inner(w_name) + '; "")}}'),
+                now("提交時間", "{{" + submit + 'now; "")}}'),
+                {"key": "實際交付日", "type": "date", "date": {"start": "{{" + submit + 'formatDate(now; "YYYY-MM-DD"); "")}}'}}],
+                ds=DS_TASK),
+            b.create(f"新增審核紀錄（{label}）", [
+                fv("紀錄", "title", task_name + "｜{{" + submit + '"送審"; "改狀態")}}'),
+                fv("任務", "relation", f'{{{{split({G2}.id; ",")}}}}'),
+                fv("動作", "select", "{{" + submit + '"送審"; "改狀態")}}'), fv("狀態", "select", status_v),
+                fv("版本號", "select", version_v), fv("身分", "select", w_role), fv("姓名", "rich_text", w_name),
+                now("時間"), fv("意見", "rich_text", note_v), fv("雲端連結", "url", link_v), fv("上傳檔案", "url", file_link)],
+                ds=DS_REVIEW),
+            respond(f"回傳已儲存（{label}）", '{"ok":true}'),
+            approvers,
+            push(b, f"通知製作人與導演有人送審（{label}）", sp(approvers["id"], "LINE User ID", "[].plain_text"),
+                 "📤 " + w_role + "送審：" + task_name + "\n" + LIFF + f"?v=task&id={{{{{G2}.id}}}}"),
+        ]
+    up = b.drive_upload("交件檔案存到雲端硬碟", sp(G2, "序號") + "_{{formatDate(now; \"YYYYMMDD-HHmmss\")}}."
+                        + pick("1.ext", EXTS, '"bin"'), "1.file")
+    U = up["id"]
+    attach = b.notion_api("檔案放進任務的交付檔案上傳", f"/v1/pages/{{{{{G2}.id}}}}", "PATCH", json.dumps({"properties": {
+        "交付檔案上傳": {"files": [{"name": f"{{{{{U}.name}}}}", "type": "external",
+                              "external": {"url": f"{{{{{U}.webViewLink}}}}"}}]}}}, ensure_ascii=False))
+    can_edit = [c(own2, "text:equal", "yes"), c(sp(G2, "狀態", ".name"), "text:notequal", "已核准")]
+    save_flow = [g2, b.router("可否交件", [
+        (flt("交件（含檔案）", [can_edit + [c("{{1.file}}", "exist")]]), [up, attach, *save_route("含檔案", f"{{{{{U}.webViewLink}}}}")]),
+        (flt("交件（不含檔案）", [can_edit + [c("{{1.file}}", "notexist")]]), save_route("不含檔案", "")),
+        (flt("不能交件", [[c(own2, "text:equal", "no")], [c(sp(G2, "狀態", ".name"), "text:equal", "已核准")]]), [
+            respond("回傳不能交件", '{"ok":false,"error":"locked"}', "409")]),
+    ])]
+
+    # ---- review：導演、製作人審核待審核的任務；記下審核身分與審核人，並通知負責的成員 ----
+    g3, G3, _own3 = read_task("審核")
+    approved = 'if(1.decision = "approve"; '
+    result = "{{" + approved + '"已核准"; "退回修改")}}'
+    comment_v = cut("1.comment", 1000)
+    task3 = sp(G3, "任務名稱", "[].plain_text")
+    doers = b.search("找負責這個任務的成員", DS_MEMBER, [[c(prop("狀態", "select"), "select:equals", "已核准")]], limit="50")
+    D = doers["id"]
+    # 推播內文是 JSON，運算式裡帶引號會被跳脫而算不出來，所以核准、退回各用一則固定文字
+    doer_is = [c(sp(D, "角色", ".name"), "text:equal", role_of(sp(G3, "執行職掌", ".name"))),
+               c(sp(D, "LINE User ID", "[].plain_text"), "exist")]
+    task_link = "\n" + LIFF + f"?v=task&id={{{{{G3}.id}}}}"
+    notify_doer = b.router("通知負責成員審核結果", [
+        (flt("核准通知", [doer_is + [c("{{1.decision}}", "text:equal", "approve")]]), [
+            push(b, "通知已核准", sp(D, "LINE User ID", "[].plain_text"), "✅ 已核准：" + task3 + task_link)]),
+        (flt("退回通知", [doer_is + [c("{{1.decision}}", "text:equal", "return")]]), [
+            push(b, "通知退回修改", sp(D, "LINE User ID", "[].plain_text"), "↩️ 退回修改：" + task3 + "\n請打開任務查看審核意見。" + task_link)]),
+    ])
+    review_flow = [g3, b.router("可否審核", [
+        (flt("待審核：可以審核", [[c(sp(G3, "狀態", ".name"), "text:equal", "待審核"), c("{{1.decision}}", "text:equal", d)]
+                                  for d in ("approve", "return")]), [
+            b.update("寫入審核結果", f"{{{{{G3}.id}}}}", [
+                fv("狀態", "select", result), fv("審核意見", "rich_text", comment_v), now("審核日期"),
+                fv("審核身分", "select", w_role), fv("審核人", "rich_text", w_name)], ds=DS_TASK),
+            b.create("新增審核紀錄（審核）", [
+                fv("紀錄", "title", task3 + "｜{{" + approved + '"核准"; "退回")}}'),
+                fv("任務", "relation", f'{{{{split({G3}.id; ",")}}}}'),
+                fv("動作", "select", "{{" + approved + '"核准"; "退回")}}'), fv("狀態", "select", result),
+                fv("版本號", "select", sp(G3, "版本號", ".name")), fv("身分", "select", w_role),
+                fv("姓名", "rich_text", w_name), now("時間"), fv("意見", "rich_text", comment_v)], ds=DS_REVIEW),
+            respond("回傳已審核", '{"ok":true}'),
+            doers, notify_doer]),
+        (flt("不是待審核", [[c(sp(G3, "狀態", ".name"), "text:notequal", "待審核")]]), [
+            respond("回傳不能審核", '{"ok":false,"error":"bad_target"}', "409")]),
+    ])]
+
     act = lambda a: c("{{1.a}}", "text:equal", a)
-    ACTS = ("me", "apply", "tasks", "pending", "approve", "reject")
+    ACTS = ("me", "apply", "tasks", "pending", "approve", "reject", "task", "save", "review")
+    MEMBER_ACTS = ("task", "save")
+    APPROVER_ACTS = ("pending", "approve", "reject", "review")
     approver_only = lambda a: [g + [act(a)] for g in is_approver]
     not_approver = lambda a: [[act(a), none], [act(a), c(w_state, "text:notequal", "已核准")]] + \
         [[act(a), exist, is_member] + [c(w_role, "text:notequal", r) for r in APPROVERS]]
@@ -392,8 +537,14 @@ def build_api():
                         (flt("待核准名單", approver_only("pending")), pending_flow),
                         (flt("核准", [g + [c("{{1.id}}", "exist")] for g in approver_only("approve")]), approve_flow),
                         (flt("退回", [g + [c("{{1.id}}", "exist")] for g in approver_only("reject")]), reject_flow),
-                        (flt("不是製作人或導演", not_approver("pending") + not_approver("approve") + not_approver("reject")), [
+                        (flt("任務明細", [[act("task"), c("{{1.id}}", "exist"), exist, is_member]]), task_flow),
+                        (flt("交件", [[act("save"), c("{{1.id}}", "exist"), exist, is_member]]), save_flow),
+                        (flt("審核任務", [g + [c("{{1.id}}", "exist")] for g in approver_only("review")]), review_flow),
+                        (flt("不是製作人或導演", [g for a in APPROVER_ACTS for g in not_approver(a)]), [
                             forbidden("回傳沒有權限（核准）")]),
+                        (flt("不是團隊成員（任務明細、交件）", [g for a in MEMBER_ACTS
+                                                       for g in ([[act(a), none], [act(a), c(w_state, "text:notequal", "已核准")]])]), [
+                            forbidden("回傳沒有權限（交件）")]),
                     ])]),
                 ])]),
             # 先檢查格式，不對就直接回 400，不先問 LINE，減少被亂打時消耗的額度

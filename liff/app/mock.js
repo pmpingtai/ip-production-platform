@@ -54,5 +54,52 @@
     async pending() { await wait(300); return { ok: true, members: pending }; },
     async approve(id) { await wait(400); pending = pending.filter((p) => p.id !== id); return { ok: true }; },
     async reject(id) { await wait(400); pending = pending.filter((p) => p.id !== id); return { ok: true }; },
+
+    // 任務明細、交件、審核：只改記憶體裡的資料，重新整理就還原
+    async task(id) {
+      await wait(300);
+      const t = find(id);
+      const own = (ownRoles()).includes(t.properties_value.執行職掌?.name);
+      if (!own && !managers.includes(me.role)) throw err('forbidden');
+      return { ok: true, id, own: own ? 'yes' : 'no', task: t.properties_value, logs: (logs[id] || []).slice().reverse() };
+    },
+    async save(f) {
+      await wait(f.file ? 1200 : 500);
+      const t = find(f.id), p = t.properties_value;
+      if (!ownRoles().includes(p.執行職掌?.name) || p.狀態?.name === '已核准') throw err('locked');
+      const fileUrl = f.file ? `https://drive.google.com/file/d/mock-${Date.now()}/view` : '';
+      Object.assign(p, { 狀態: sel(f.status), 版本號: sel(f.version), 交付雲端連結: f.link, 執行者留言: rt(f.note) });
+      if (fileUrl) p.交付檔案上傳 = [{ name: `${p.序號 || 'task'}.${f.ext}`, url: fileUrl }];
+      if (f.status === '待審核') Object.assign(p, { 提交人: rt(me.name), 提交時間: { start: new Date().toISOString() } });
+      log(f.id, f.status === '待審核' ? '送審' : '改狀態', f.status, f.version, f.note, f.link, fileUrl);
+      return { ok: true };
+    },
+    async review(id, decision, comment) {
+      await wait(500);
+      const p = find(id).properties_value;
+      if (!managers.includes(me.role)) throw err('forbidden');
+      if (p.狀態?.name !== '待審核') throw err('bad_target');
+      const status = decision === 'approve' ? '已核准' : '退回修改';
+      Object.assign(p, { 狀態: sel(status), 審核意見: rt(comment), 審核身分: sel(me.role), 審核人: rt(me.name), 審核日期: { start: new Date().toISOString() } });
+      log(id, decision === 'approve' ? '核准' : '退回', status, p.版本號?.name, comment, '', '');
+      return { ok: true };
+    },
   };
+
+  const managers = ['導演', '製作人'];
+  const ALIAS = { 藝術總監: ['藝術總監', '場景設計師', '道具設計師'], 聲音總監: ['聲音總監', '音樂製作人', '詞曲創作者'] };
+  const ownRoles = () => ALIAS[me.role] || [me.role];
+  const err = (code) => Object.assign(new Error(code), { code });
+  // stats.js 會把 Notion id 的連字號拿掉
+  const find = (id) => { const t = tasks.find((x) => x.id.replace(/-/g, '') === id.replace(/-/g, '')); if (!t) throw err('not_found'); return t; };
+  const logs = {};
+  // 和 Notion 查詢結果同格式（properties 原始結構），讓頁面的解析和正式環境一樣
+  const log = (id, action, status, version, note, link, file) => (logs[id] ||= []).push({
+    created_time: new Date().toISOString(),
+    properties: {
+      動作: { select: sel(action) }, 狀態: { select: sel(status) }, 版本號: { select: sel(version) }, 身分: { select: sel(me.role) },
+      姓名: { rich_text: rt(me.name) }, 時間: { date: { start: new Date().toISOString() } }, 意見: { rich_text: rt(note) },
+      雲端連結: { url: link || null }, 上傳檔案: { url: file || null },
+    },
+  });
 })();

@@ -1,0 +1,23 @@
+{
+  "_說明": "複製成 config.local.json 再填入實際 ID（config.local.json 不進版本庫）。數字欄位填 Make 的編號。",
+  "project": "風雅存",
+  "make": {
+    "team_id": 0,
+    "folder_id": 0,
+    "api_hook_id": 0,
+    "events_hook_id": 0,
+    "notion_connection_id": 0,
+    "line_connection_id": 0
+  },
+  "line": {
+    "login_channel_id": "LINE Login channel 的 Channel ID",
+    "liff_id": "LIFF ID"
+  },
+  "notion": {
+    "members_ds": "👥 LINE 團隊成員 的 data source ID",
+    "tasks_ds": "📋 製作流程查核總表 的 data source ID",
+    "projects_ds": "📁 風雅存_專案資料庫 的 data source ID"
+  },
+  "pages_base": "https://<GitHub 帳號>.github.io/<repo>",
+  "page_origin": "https://<GitHub 帳號>.github.io"
+}

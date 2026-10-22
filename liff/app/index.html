@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://static.line-scdn.net https://liffsdk.line-scdn.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://hook.us2.make.com https://api.line.me https://*.line.me https://*.line-scdn.net https://uts-front.line-apps.com; frame-src https://*.line.me; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>風雅存製作團隊</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="who">
+      <span class="title" id="title">風雅存製作團隊</span>
+      <span class="badge" id="badge" hidden></span>
+    </div>
+    <select id="project" class="project" aria-label="選擇專案" hidden></select>
+    <nav class="tabs" id="tabs" hidden></nav>
+  </header>
+  <div class="notice" id="notice" hidden></div>
+  <main id="app" aria-live="polite"><p class="blocked">讀取中…</p></main>
+  <footer class="foot" id="foot"></footer>
+</div>
+<div class="bar" id="bar" hidden><div class="in" id="barIn"></div></div>
+<script src="https://static.line-scdn.net/liff/edge/versions/2.31.2/sdk.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

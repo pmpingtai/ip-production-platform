@@ -1,0 +1,346 @@
+{
+ "name": "風雅存｜LINE 事件",
+ "flow": [
+  {
+   "id": 1,
+   "module": "line:watchMessages",
+   "version": 1,
+   "mapper": {},
+   "metadata": {
+    "designer": {
+     "x": -300,
+     "y": 0,
+     "name": "LINE 事件"
+    },
+    "parameters": [
+     {
+      "name": "__IMTHOOK__",
+      "type": "hook:line",
+      "label": "Webhook",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTHOOK__": 0
+   }
+  },
+  {
+   "id": 101,
+   "module": "notion:searchObjects1",
+   "version": 1,
+   "mapper": {
+    "limit": "1",
+    "select": "data_source_item",
+    "data_source": "👥 LINE 團隊成員 的 data source ID",
+    "filter": [
+     [
+      {
+       "a": "LINE User ID |&*^%$#@| rich_text",
+       "o": "text:equals",
+       "b": "{{1.events[1].source.userId}}"
+      }
+     ]
+    ]
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 150,
+     "name": "找名冊"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "filter": {
+    "name": "只處理加好友、封鎖",
+    "conditions": [
+     [
+      {
+       "a": "{{1.events[1].type}}",
+       "o": "text:equal",
+       "b": "follow"
+      }
+     ],
+     [
+      {
+       "a": "{{1.events[1].type}}",
+       "o": "text:equal",
+       "b": "unfollow"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "id": 106,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 900,
+     "name": "依事件分流"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 102,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/profile/{{1.events[1].source.userId}}",
+        "method": "GET",
+        "headers": []
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 300,
+         "name": "取得 LINE 名稱"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "filter": {
+        "name": "新好友",
+        "conditions": [
+         [
+          {
+           "a": "{{1.events[1].type}}",
+           "o": "text:equal",
+           "b": "follow"
+          },
+          {
+           "a": "{{101.id}}",
+           "o": "notexist"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "id": 103,
+       "module": "notion:createDataSourceItem",
+       "version": 1,
+       "mapper": {
+        "fields": [
+         {
+          "key": "姓名",
+          "type": "title",
+          "value": "（LINE）{{102.body.displayName}}"
+         },
+         {
+          "key": "狀態",
+          "type": "select",
+          "value": "訪客"
+         },
+         {
+          "key": "好友狀態",
+          "type": "select",
+          "value": "好友中"
+         },
+         {
+          "key": "LINE 顯示名稱",
+          "type": "rich_text",
+          "value": "{{102.body.displayName}}"
+         },
+         {
+          "key": "LINE User ID",
+          "type": "rich_text",
+          "value": "{{1.events[1].source.userId}}"
+         },
+         {
+          "key": "目前選單",
+          "type": "select",
+          "value": "訪客"
+         },
+         {
+          "key": "加入好友時間",
+          "type": "date",
+          "date": {
+           "start": "{{now}}",
+           "includeTime": true
+          }
+         }
+        ],
+        "select": "map",
+        "data_source": "👥 LINE 團隊成員 的 data source ID"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 450,
+         "name": "新增訪客"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:notion2,notion3",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "parameters": {
+        "__IMTCONN__": 0
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 104,
+       "module": "notion:updateADatabaseItem",
+       "version": 1,
+       "mapper": {
+        "page": "{{101.id}}",
+        "fields": [
+         {
+          "key": "好友狀態",
+          "type": "select",
+          "value": "好友中"
+         }
+        ],
+        "select": "map",
+        "updateBy": "data_source",
+        "data_source": "👥 LINE 團隊成員 的 data source ID"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 600,
+         "name": "改回好友中"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:notion2,notion3",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "filter": {
+        "name": "重新加好友",
+        "conditions": [
+         [
+          {
+           "a": "{{1.events[1].type}}",
+           "o": "text:equal",
+           "b": "follow"
+          },
+          {
+           "a": "{{101.id}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 105,
+       "module": "notion:updateADatabaseItem",
+       "version": 1,
+       "mapper": {
+        "page": "{{101.id}}",
+        "fields": [
+         {
+          "key": "好友狀態",
+          "type": "select",
+          "value": "已封鎖"
+         }
+        ],
+        "select": "map",
+        "updateBy": "data_source",
+        "data_source": "👥 LINE 團隊成員 的 data source ID"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 750,
+         "name": "標記已封鎖"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:notion2,notion3",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "filter": {
+        "name": "封鎖",
+        "conditions": [
+         [
+          {
+           "a": "{{1.events[1].type}}",
+           "o": "text:equal",
+           "b": "unfollow"
+          },
+          {
+           "a": "{{101.id}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "metadata": {
+  "instant": true,
+  "version": 1,
+  "designer": {
+   "orphans": []
+  },
+  "scenario": {
+   "dlq": true,
+   "slots": null,
+   "dataloss": false,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "roundtrips": 1,
+   "sequential": false,
+   "confidential": false,
+   "freshVariables": false,
+   "autoCommitTriggerLast": true
+  }
+ }
+}

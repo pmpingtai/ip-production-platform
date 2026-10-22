@@ -1,0 +1,4000 @@
+{
+ "name": "風雅存｜LIFF API",
+ "flow": [
+  {
+   "id": 1,
+   "module": "gateway:CustomWebHook",
+   "version": 1,
+   "parameters": {
+    "hook": 0,
+    "maxResults": 1
+   },
+   "mapper": {},
+   "metadata": {
+    "designer": {
+     "x": -300,
+     "y": 0,
+     "name": "LIFF 頁面送來的請求"
+    },
+    "parameters": [
+     {
+      "name": "hook",
+      "type": "hook:gateway-webhook",
+      "label": "Webhook",
+      "required": true
+     },
+     {
+      "name": "maxResults",
+      "type": "number",
+      "label": "Maximum number of results"
+     }
+    ]
+   }
+  },
+  {
+   "id": 197,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 12300,
+     "name": "請求種類"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 2,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false
+       },
+       "mapper": {
+        "url": "https://api.line.me/oauth2/v2.1/verify?access_token={{encodeURL(1.t)}}",
+        "method": "get",
+        "serializeUrl": false,
+        "shareCookies": false,
+        "parseResponse": true,
+        "headers": [],
+        "qs": [],
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "followAllRedirects": false,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false
+       },
+       "metadata": {
+        "designer": {
+         "x": 0,
+         "y": 0,
+         "name": "向 LINE 驗證 Access Token"
+        }
+       },
+       "onerror": [
+        {
+         "id": 101,
+         "module": "gateway:WebhookRespond",
+         "version": 1,
+         "parameters": {},
+         "mapper": {
+          "status": "401",
+          "body": "{\"ok\":false,\"error\":\"auth\"}",
+          "headers": [
+           {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+           },
+           {
+            "key": "Access-Control-Allow-Origin",
+            "value": "https://<GitHub 帳號>.github.io"
+           }
+          ]
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 150,
+           "name": "回傳驗證失敗（向 LINE 驗證 Access Token）"
+          }
+         }
+        },
+        {
+         "id": 102,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 150
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "LIFF 請求",
+        "conditions": [
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "me"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "apply"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "tasks"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "pending"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "approve"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:equal",
+           "b": "reject"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "id": 195,
+       "module": "builtin:BasicRouter",
+       "version": 1,
+       "mapper": null,
+       "metadata": {
+        "designer": {
+         "x": 600,
+         "y": 12000,
+         "name": "身分驗證"
+        }
+       },
+       "routes": [
+        {
+         "flow": [
+          {
+           "id": 192,
+           "module": "gateway:WebhookRespond",
+           "version": 1,
+           "parameters": {},
+           "mapper": {
+            "status": "401",
+            "body": "{\"ok\":false,\"error\":\"auth\"}",
+            "headers": [
+             {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+             },
+             {
+              "key": "Access-Control-Allow-Origin",
+              "value": "https://<GitHub 帳號>.github.io"
+             }
+            ]
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 11550,
+             "name": "回傳驗證失敗"
+            }
+           },
+           "filter": {
+            "name": "不是本系統的憑證",
+            "conditions": [
+             [
+              {
+               "a": "{{2.data.client_id}}",
+               "o": "text:notequal",
+               "b": "LINE Login channel 的 Channel ID"
+              }
+             ]
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "flow": [
+          {
+           "id": 4,
+           "module": "http:ActionSendData",
+           "version": 3,
+           "parameters": {
+            "handleErrors": false
+           },
+           "mapper": {
+            "url": "https://api.line.me/v2/profile",
+            "method": "get",
+            "serializeUrl": false,
+            "shareCookies": false,
+            "parseResponse": true,
+            "headers": [
+             {
+              "name": "Authorization",
+              "value": "Bearer {{1.t}}"
+             }
+            ],
+            "qs": [],
+            "rejectUnauthorized": true,
+            "followRedirect": true,
+            "followAllRedirects": false,
+            "useQuerystring": false,
+            "gzip": true,
+            "useMtls": false
+           },
+           "metadata": {
+            "designer": {
+             "x": 150,
+             "y": 150,
+             "name": "向 LINE 取得使用者編號"
+            }
+           },
+           "onerror": [
+            {
+             "id": 103,
+             "module": "gateway:WebhookRespond",
+             "version": 1,
+             "parameters": {},
+             "mapper": {
+              "status": "401",
+              "body": "{\"ok\":false,\"error\":\"auth\"}",
+              "headers": [
+               {
+                "key": "Content-Type",
+                "value": "application/json; charset=utf-8"
+               },
+               {
+                "key": "Access-Control-Allow-Origin",
+                "value": "https://<GitHub 帳號>.github.io"
+               }
+              ]
+             },
+             "metadata": {
+              "designer": {
+               "x": 900,
+               "y": 300,
+               "name": "回傳驗證失敗（向 LINE 取得使用者編號）"
+              }
+             }
+            },
+            {
+             "id": 104,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 300
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "身分驗證成功",
+            "conditions": [
+             [
+              {
+               "a": "{{2.data.client_id}}",
+               "o": "text:equal",
+               "b": "LINE Login channel 的 Channel ID"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 105,
+           "module": "notion:searchObjects1",
+           "version": 1,
+           "mapper": {
+            "limit": "1",
+            "select": "data_source_item",
+            "data_source": "👥 LINE 團隊成員 的 data source ID",
+            "filter": [
+             [
+              {
+               "a": "LINE User ID |&*^%$#@| rich_text",
+               "o": "text:equals",
+               "b": "{{4.data.userId}}"
+              }
+             ]
+            ]
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 450,
+             "name": "找我的名冊"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          },
+          {
+           "id": 194,
+           "module": "builtin:BasicRouter",
+           "version": 1,
+           "mapper": null,
+           "metadata": {
+            "designer": {
+             "x": 600,
+             "y": 11850,
+             "name": "依動作分流"
+            }
+           },
+           "routes": [
+            {
+             "flow": [
+              {
+               "id": 128,
+               "module": "builtin:BasicRouter",
+               "version": 1,
+               "mapper": null,
+               "metadata": {
+                "designer": {
+                 "x": 600,
+                 "y": 3300,
+                 "name": "我的身分（順便校正選單）"
+                }
+               },
+               "routes": [
+                {
+                 "flow": [
+                  {
+                   "id": 106,
+                   "module": "notion:createDataSourceItem",
+                   "version": 1,
+                   "mapper": {
+                    "fields": [
+                     {
+                      "key": "姓名",
+                      "type": "title",
+                      "value": "（LINE）{{4.data.displayName}}"
+                     },
+                     {
+                      "key": "狀態",
+                      "type": "select",
+                      "value": "訪客"
+                     },
+                     {
+                      "key": "LINE 顯示名稱",
+                      "type": "rich_text",
+                      "value": "{{4.data.displayName}}"
+                     },
+                     {
+                      "key": "LINE User ID",
+                      "type": "rich_text",
+                      "value": "{{4.data.userId}}"
+                     },
+                     {
+                      "key": "好友狀態",
+                      "type": "select",
+                      "value": "好友中"
+                     },
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "訪客"
+                     }
+                    ],
+                    "select": "map",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 600,
+                     "name": "新增訪客"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "還沒有名冊",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "notexist"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 107,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"guest\",\"role\":\"\",\"applyRole\":\"\",\"name\":\"\",\"note\":\"\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 750,
+                     "name": "回傳訪客"
+                    }
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 108,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 900,
+                     "name": "回傳我的身分"
+                    }
+                   },
+                   "filter": {
+                    "name": "選單正確",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{if(105.properties_value.`狀態`.name = \"已核准\"; switch(105.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+                       "o": "text:equal",
+                       "b": "{{105.properties_value.`目前選單`.name}}"
+                      }
+                     ]
+                    ]
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 109,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1050,
+                     "name": "回傳我的身分（校正成訪客選單）"
+                    }
+                   },
+                   "filter": {
+                    "name": "應該是訪客選單",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{if(105.properties_value.`狀態`.name = \"已核准\"; switch(105.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+                       "o": "text:equal",
+                       "b": "訪客"
+                      },
+                      {
+                       "a": "{{105.properties_value.`目前選單`.name}}",
+                       "o": "text:notequal",
+                       "b": "訪客"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 110,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{105.id}}",
+                    "fields": [
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "訪客"
+                     },
+                     {
+                      "key": "選單同步時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1200,
+                     "name": "記下目前選單：訪客（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  },
+                  {
+                   "id": 112,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/user/{{4.data.userId}}/richmenu",
+                    "method": "DELETE",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1350,
+                     "name": "解除個人選單（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 111,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 1200
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 113,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1500,
+                     "name": "回傳我的身分（校正成團隊成員選單）"
+                    }
+                   },
+                   "filter": {
+                    "name": "應該是團隊成員選單",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{if(105.properties_value.`狀態`.name = \"已核准\"; switch(105.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+                       "o": "text:equal",
+                       "b": "團隊成員"
+                      },
+                      {
+                       "a": "{{105.properties_value.`目前選單`.name}}",
+                       "o": "text:notequal",
+                       "b": "團隊成員"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 115,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/richmenu/alias/member",
+                    "method": "GET",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1650,
+                     "name": "取得團隊成員選單編號（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 114,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 1500
+                      }
+                     }
+                    }
+                   ]
+                  },
+                  {
+                   "id": 116,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/user/{{4.data.userId}}/richmenu/{{115.body.richMenuId}}",
+                    "method": "POST",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1800,
+                     "name": "綁定團隊成員選單（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "id": 117,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{105.id}}",
+                    "fields": [
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "團隊成員"
+                     },
+                     {
+                      "key": "選單同步時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 1950,
+                     "name": "記下目前選單：團隊成員（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 118,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2100,
+                     "name": "回傳我的身分（校正成製作人選單）"
+                    }
+                   },
+                   "filter": {
+                    "name": "應該是製作人選單",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{if(105.properties_value.`狀態`.name = \"已核准\"; switch(105.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+                       "o": "text:equal",
+                       "b": "製作人"
+                      },
+                      {
+                       "a": "{{105.properties_value.`目前選單`.name}}",
+                       "o": "text:notequal",
+                       "b": "製作人"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 120,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/richmenu/alias/producer",
+                    "method": "GET",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2250,
+                     "name": "取得製作人選單編號（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 119,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 2100
+                      }
+                     }
+                    }
+                   ]
+                  },
+                  {
+                   "id": 121,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/user/{{4.data.userId}}/richmenu/{{120.body.richMenuId}}",
+                    "method": "POST",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2400,
+                     "name": "綁定製作人選單（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "id": 122,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{105.id}}",
+                    "fields": [
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "製作人"
+                     },
+                     {
+                      "key": "選單同步時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2550,
+                     "name": "記下目前選單：製作人（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 123,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2700,
+                     "name": "回傳我的身分（校正成導演選單）"
+                    }
+                   },
+                   "filter": {
+                    "name": "應該是導演選單",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{if(105.properties_value.`狀態`.name = \"已核准\"; switch(105.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+                       "o": "text:equal",
+                       "b": "導演"
+                      },
+                      {
+                       "a": "{{105.properties_value.`目前選單`.name}}",
+                       "o": "text:notequal",
+                       "b": "導演"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 125,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/richmenu/alias/director",
+                    "method": "GET",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 2850,
+                     "name": "取得導演選單編號（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 124,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 2700
+                      }
+                     }
+                    }
+                   ]
+                  },
+                  {
+                   "id": 126,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/user/{{4.data.userId}}/richmenu/{{125.body.richMenuId}}",
+                    "method": "POST",
+                    "headers": []
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3000,
+                     "name": "綁定導演選單（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "id": 127,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{105.id}}",
+                    "fields": [
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "導演"
+                     },
+                     {
+                      "key": "選單同步時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3150,
+                     "name": "記下目前選單：導演（校正）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  }
+                 ]
+                }
+               ],
+               "filter": {
+                "name": "我的身分",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "me"
+                  }
+                 ]
+                ]
+               }
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 140,
+               "module": "builtin:BasicRouter",
+               "version": 1,
+               "mapper": null,
+               "metadata": {
+                "designer": {
+                 "x": 600,
+                 "y": 4800,
+                 "name": "申請加入"
+                }
+               },
+               "routes": [
+                {
+                 "flow": [
+                  {
+                   "id": 129,
+                   "module": "notion:createDataSourceItem",
+                   "version": 1,
+                   "mapper": {
+                    "fields": [
+                     {
+                      "key": "姓名",
+                      "type": "title",
+                      "value": "{{substring(1.name; 0; 40)}}"
+                     },
+                     {
+                      "key": "申請角色",
+                      "type": "select",
+                      "value": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; null)}}"
+                     },
+                     {
+                      "key": "備註",
+                      "type": "rich_text",
+                      "value": "{{substring(1.note; 0; 300)}}"
+                     },
+                     {
+                      "key": "狀態",
+                      "type": "select",
+                      "value": "審核中"
+                     },
+                     {
+                      "key": "申請時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     },
+                     {
+                      "key": "LINE 顯示名稱",
+                      "type": "rich_text",
+                      "value": "{{4.data.displayName}}"
+                     },
+                     {
+                      "key": "LINE User ID",
+                      "type": "rich_text",
+                      "value": "{{4.data.userId}}"
+                     },
+                     {
+                      "key": "好友狀態",
+                      "type": "select",
+                      "value": "好友中"
+                     },
+                     {
+                      "key": "目前選單",
+                      "type": "select",
+                      "value": "訪客"
+                     }
+                    ],
+                    "select": "map",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3450,
+                     "name": "新增名冊（審核中）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "新申請（還沒有名冊）",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "notexist"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 130,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"pending\",\"role\":\"\",\"applyRole\":\"{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; \"\")}}\",\"name\":\"{{encodeURL(1.name)}}\",\"note\":\"{{encodeURL(1.note)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3600,
+                     "name": "回傳審核中（新）"
+                    }
+                   }
+                  },
+                  {
+                   "id": 131,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "10",
+                    "select": "data_source_item",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "角色 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "製作人"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "角色 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "導演"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3750,
+                     "name": "找製作人與導演（通知申請）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  },
+                  {
+                   "id": 133,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/message/push",
+                    "method": "POST",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                     }
+                    ],
+                    "body": "{\"to\": \"{{131.properties_value.`LINE User ID`[].plain_text}}\", \"messages\": [{\"type\": \"text\", \"text\": \"📥 有新的團隊成員申請（申請角色：{{if(contains(split(\\\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\\\"; \\\",\\\"); 1.role); 1.role; \\\"未填\\\")}}），請到「核准團隊成員」處理：\\nhttps://liff.line.me/LIFF ID?v=approve\"}]}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 3900,
+                     "name": "推播新申請給製作人與導演"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 132,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 3750
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 134,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{105.id}}",
+                    "fields": [
+                     {
+                      "key": "姓名",
+                      "type": "title",
+                      "value": "{{substring(1.name; 0; 40)}}"
+                     },
+                     {
+                      "key": "申請角色",
+                      "type": "select",
+                      "value": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; null)}}"
+                     },
+                     {
+                      "key": "備註",
+                      "type": "rich_text",
+                      "value": "{{substring(1.note; 0; 300)}}"
+                     },
+                     {
+                      "key": "狀態",
+                      "type": "select",
+                      "value": "審核中"
+                     },
+                     {
+                      "key": "申請時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     },
+                     {
+                      "key": "LINE 顯示名稱",
+                      "type": "rich_text",
+                      "value": "{{4.data.displayName}}"
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4050,
+                     "name": "更新申請資料（審核中）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "訪客、審核中或已退回：更新申請",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "訪客"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "審核中"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已退回"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 135,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"pending\",\"role\":\"\",\"applyRole\":\"{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; \"\")}}\",\"name\":\"{{encodeURL(1.name)}}\",\"note\":\"{{encodeURL(1.note)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4200,
+                     "name": "回傳審核中"
+                    }
+                   }
+                  },
+                  {
+                   "id": 136,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "10",
+                    "select": "data_source_item",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "角色 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "製作人"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "角色 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "導演"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4350,
+                     "name": "找製作人與導演（通知申請）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  },
+                  {
+                   "id": 138,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/message/push",
+                    "method": "POST",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                     }
+                    ],
+                    "body": "{\"to\": \"{{136.properties_value.`LINE User ID`[].plain_text}}\", \"messages\": [{\"type\": \"text\", \"text\": \"📥 有新的團隊成員申請（申請角色：{{if(contains(split(\\\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\\\"; \\\",\\\"); 1.role); 1.role; \\\"未填\\\")}}），請到「核准團隊成員」處理：\\nhttps://liff.line.me/LIFF ID?v=approve\"}]}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4500,
+                     "name": "推播新申請給製作人與導演"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 137,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 4350
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 139,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"state\":\"{{switch(105.properties_value.`狀態`.name; \"審核中\"; \"pending\"; \"已核准\"; \"member\"; \"已退回\"; \"rejected\"; \"停用\"; \"disabled\"; \"guest\")}}\",\"role\":\"{{105.properties_value.`角色`.name}}\",\"applyRole\":\"{{105.properties_value.`申請角色`.name}}\",\"name\":\"{{encodeURL(105.properties_value.`姓名`[].plain_text)}}\",\"note\":\"{{encodeURL(105.properties_value.`備註`[].plain_text)}}\",\"line\":\"{{encodeURL(4.data.displayName)}}\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4650,
+                     "name": "回傳目前身分（申請）"
+                    }
+                   },
+                   "filter": {
+                    "name": "已核准或停用",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "停用"
+                      }
+                     ]
+                    ]
+                   }
+                  }
+                 ]
+                }
+               ],
+               "filter": {
+                "name": "申請加入",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "apply"
+                  },
+                  {
+                   "a": "{{1.name}}",
+                   "o": "exist"
+                  }
+                 ]
+                ]
+               }
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 156,
+               "module": "builtin:BasicRouter",
+               "version": 1,
+               "mapper": null,
+               "metadata": {
+                "designer": {
+                 "x": 600,
+                 "y": 7200,
+                 "name": "依角色查任務"
+                }
+               },
+               "routes": [
+                {
+                 "flow": [
+                  {
+                   "id": 141,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "500",
+                    "select": "data_source_item",
+                    "data_source": "📋 製作流程查核總表 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 4950,
+                     "name": "找任務（全部）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "導演與製作人：全部任務",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "導演"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "製作人"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 142,
+                   "module": "builtin:BasicAggregator",
+                   "version": 1,
+                   "parameters": {
+                    "feeder": 141
+                   },
+                   "mapper": {
+                    "id": "{{141.id}}",
+                    "properties_value": "{{141.properties_value}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5100,
+                     "name": "彙整任務（全部）"
+                    }
+                   }
+                  },
+                  {
+                   "id": 143,
+                   "module": "json:TransformToJSON",
+                   "version": 1,
+                   "parameters": {
+                    "space": ""
+                   },
+                   "mapper": {
+                    "object": "{{142.array}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5250,
+                     "name": "任務（全部）轉成 JSON"
+                    }
+                   }
+                  },
+                  {
+                   "id": 144,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "50",
+                    "select": "data_source_item",
+                    "data_source": "📁 風雅存_專案資料庫 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "專案狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "進行中"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5400,
+                     "name": "找進行中的專案（全部）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  },
+                  {
+                   "id": 145,
+                   "module": "builtin:BasicAggregator",
+                   "version": 1,
+                   "parameters": {
+                    "feeder": 144
+                   },
+                   "mapper": {
+                    "id": "{{144.id}}",
+                    "properties_value": "{{144.properties_value}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5550,
+                     "name": "彙整專案（全部）"
+                    }
+                   }
+                  },
+                  {
+                   "id": 146,
+                   "module": "json:TransformToJSON",
+                   "version": 1,
+                   "parameters": {
+                    "space": ""
+                   },
+                   "mapper": {
+                    "object": "{{145.array}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5700,
+                     "name": "專案（全部）轉成 JSON"
+                    }
+                   }
+                  },
+                  {
+                   "id": 147,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"tasks\":{{143.json}},\"projects\":{{146.json}}}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 5850,
+                     "name": "回傳任務（全部）"
+                    }
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 148,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "500",
+                    "select": "data_source_item",
+                    "data_source": "📋 製作流程查核總表 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"編劇\"; \"編劇\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"藝術總監\"; \"藝術總監\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"藝術總監\"; \"場景設計師\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"藝術總監\"; \"道具設計師\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"作畫監督\"; \"作畫監督\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"作畫監督\"; \"AI動畫師\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"作畫監督\"; \"特效師\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"聲音總監\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"音樂製作人\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"詞曲創作者\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"配樂家\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"配樂家/聲音組\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"音效師/聲音組\"; \"－\")}"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "範本任務 |&*^%$#@| checkbox",
+                       "o": "checkbox:equals",
+                       "b": "false"
+                      },
+                      {
+                       "a": "執行職掌 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "{{if(105.properties_value.`角色`.name = \"聲音總監\"; \"配音員/語音導演\"; \"－\")}"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6000,
+                     "name": "找任務（自己的）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "總監：自己的任務",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "編劇"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "藝術總監"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "作畫監督"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "已核准"
+                      },
+                      {
+                       "a": "{{105.properties_value.`角色`.name}}",
+                       "o": "text:equal",
+                       "b": "聲音總監"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 149,
+                   "module": "builtin:BasicAggregator",
+                   "version": 1,
+                   "parameters": {
+                    "feeder": 148
+                   },
+                   "mapper": {
+                    "id": "{{148.id}}",
+                    "properties_value": "{{148.properties_value}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6150,
+                     "name": "彙整任務（自己的）"
+                    }
+                   }
+                  },
+                  {
+                   "id": 150,
+                   "module": "json:TransformToJSON",
+                   "version": 1,
+                   "parameters": {
+                    "space": ""
+                   },
+                   "mapper": {
+                    "object": "{{149.array}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6300,
+                     "name": "任務（自己的）轉成 JSON"
+                    }
+                   }
+                  },
+                  {
+                   "id": 151,
+                   "module": "notion:searchObjects1",
+                   "version": 1,
+                   "mapper": {
+                    "limit": "50",
+                    "select": "data_source_item",
+                    "data_source": "📁 風雅存_專案資料庫 的 data source ID",
+                    "filter": [
+                     [
+                      {
+                       "a": "專案狀態 |&*^%$#@| select",
+                       "o": "select:equals",
+                       "b": "進行中"
+                      }
+                     ]
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6450,
+                     "name": "找進行中的專案（自己的）"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   }
+                  },
+                  {
+                   "id": 152,
+                   "module": "builtin:BasicAggregator",
+                   "version": 1,
+                   "parameters": {
+                    "feeder": 151
+                   },
+                   "mapper": {
+                    "id": "{{151.id}}",
+                    "properties_value": "{{151.properties_value}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6600,
+                     "name": "彙整專案（自己的）"
+                    }
+                   }
+                  },
+                  {
+                   "id": 153,
+                   "module": "json:TransformToJSON",
+                   "version": 1,
+                   "parameters": {
+                    "space": ""
+                   },
+                   "mapper": {
+                    "object": "{{152.array}}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6750,
+                     "name": "專案（自己的）轉成 JSON"
+                    }
+                   }
+                  },
+                  {
+                   "id": 154,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true,\"tasks\":{{150.json}},\"projects\":{{153.json}}}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 6900,
+                     "name": "回傳任務（自己的）"
+                    }
+                   }
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 155,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "403",
+                    "body": "{\"ok\":false,\"error\":\"forbidden\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 7050,
+                     "name": "回傳沒有權限（任務）"
+                    }
+                   },
+                   "filter": {
+                    "name": "不是團隊成員（任務）",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "notexist"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{105.id}}",
+                       "o": "exist"
+                      },
+                      {
+                       "a": "{{105.properties_value.`狀態`.name}}",
+                       "o": "text:notequal",
+                       "b": "已核准"
+                      }
+                     ]
+                    ]
+                   }
+                  }
+                 ]
+                }
+               ],
+               "filter": {
+                "name": "任務",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "tasks"
+                  }
+                 ]
+                ]
+               }
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 157,
+               "module": "notion:searchObjects1",
+               "version": 1,
+               "mapper": {
+                "limit": "50",
+                "select": "data_source_item",
+                "data_source": "👥 LINE 團隊成員 的 data source ID",
+                "filter": [
+                 [
+                  {
+                   "a": "狀態 |&*^%$#@| select",
+                   "o": "select:equals",
+                   "b": "審核中"
+                  }
+                 ]
+                ]
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 7350,
+                 "name": "找審核中的申請"
+                },
+                "parameters": [
+                 {
+                  "name": "__IMTCONN__",
+                  "type": "account:notion2,notion3",
+                  "label": "Connection",
+                  "required": true
+                 }
+                ]
+               },
+               "parameters": {
+                "__IMTCONN__": 0
+               },
+               "filter": {
+                "name": "待核准名單",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "pending"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "導演"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "pending"
+                  }
+                 ]
+                ]
+               }
+              },
+              {
+               "id": 158,
+               "module": "builtin:BasicAggregator",
+               "version": 1,
+               "parameters": {
+                "feeder": 157
+               },
+               "mapper": {
+                "id": "{{157.id}}",
+                "properties_value": "{{157.properties_value}}"
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 7500,
+                 "name": "彙整申請"
+                }
+               }
+              },
+              {
+               "id": 159,
+               "module": "json:TransformToJSON",
+               "version": 1,
+               "parameters": {
+                "space": ""
+               },
+               "mapper": {
+                "object": "{{158.array}}"
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 7650,
+                 "name": "申請轉成 JSON"
+                }
+               }
+              },
+              {
+               "id": 160,
+               "module": "gateway:WebhookRespond",
+               "version": 1,
+               "parameters": {},
+               "mapper": {
+                "status": "200",
+                "body": "{\"ok\":true,\"members\":{{159.json}}}",
+                "headers": [
+                 {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                 },
+                 {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "https://<GitHub 帳號>.github.io"
+                 }
+                ]
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 7800,
+                 "name": "回傳待核准名單"
+                }
+               }
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 163,
+               "module": "notion:getADatabaseItem",
+               "version": 1,
+               "mapper": {
+                "page": "{{1.id}}",
+                "getBy": "data_source",
+                "select": "map"
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 8100,
+                 "name": "讀申請（核准）"
+                },
+                "parameters": [
+                 {
+                  "name": "__IMTCONN__",
+                  "type": "account:notion2,notion3",
+                  "label": "Connection",
+                  "required": true
+                 }
+                ]
+               },
+               "parameters": {
+                "__IMTCONN__": 0
+               },
+               "onerror": [
+                {
+                 "id": 161,
+                 "module": "gateway:WebhookRespond",
+                 "version": 1,
+                 "parameters": {},
+                 "mapper": {
+                  "status": "409",
+                  "body": "{\"ok\":false,\"error\":\"bad_target\"}",
+                  "headers": [
+                   {
+                    "key": "Content-Type",
+                    "value": "application/json; charset=utf-8"
+                   },
+                   {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "https://<GitHub 帳號>.github.io"
+                   }
+                  ]
+                 },
+                 "metadata": {
+                  "designer": {
+                   "x": 900,
+                   "y": 7950,
+                   "name": "回傳找不到申請（核准）"
+                  }
+                 }
+                },
+                {
+                 "id": 162,
+                 "module": "builtin:Ignore",
+                 "version": 1,
+                 "mapper": null,
+                 "metadata": {
+                  "designer": {
+                   "x": 1200,
+                   "y": 7950
+                  }
+                 }
+                }
+               ],
+               "filter": {
+                "name": "核准",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "approve"
+                  },
+                  {
+                   "a": "{{1.id}}",
+                   "o": "exist"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "導演"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "approve"
+                  },
+                  {
+                   "a": "{{1.id}}",
+                   "o": "exist"
+                  }
+                 ]
+                ]
+               }
+              },
+              {
+               "id": 182,
+               "module": "builtin:BasicRouter",
+               "version": 1,
+               "mapper": null,
+               "metadata": {
+                "designer": {
+                 "x": 600,
+                 "y": 10350,
+                 "name": "可否核准"
+                }
+               },
+               "routes": [
+                {
+                 "flow": [
+                  {
+                   "id": 164,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{163.id}}",
+                    "fields": [
+                     {
+                      "key": "狀態",
+                      "type": "select",
+                      "value": "已核准"
+                     },
+                     {
+                      "key": "角色",
+                      "type": "select",
+                      "value": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}"
+                     },
+                     {
+                      "key": "核准時間",
+                      "type": "date",
+                      "date": {
+                       "start": "{{now}}",
+                       "includeTime": true
+                      }
+                     },
+                     {
+                      "key": "核准人",
+                      "type": "rich_text",
+                      "value": "{{105.properties_value.`姓名`[].plain_text}}"
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 8250,
+                     "name": "核准：設定角色"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "可以核准",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{163.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "審核中"
+                      },
+                      {
+                       "a": "{{163.properties_value.`LINE User ID`[].plain_text}}",
+                       "o": "exist"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 165,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 8400,
+                     "name": "回傳已核准"
+                    }
+                   }
+                  },
+                  {
+                   "id": 167,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/message/push",
+                    "method": "POST",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                     }
+                    ],
+                    "body": "{\"to\": \"{{163.properties_value.`LINE User ID`[].plain_text}}\", \"messages\": [{\"type\": \"text\", \"text\": \"✅ 你已加入風雅存製作團隊（角色：{{if(contains(split(\\\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\\\"; \\\",\\\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}）。\\n下方選單會換成團隊版，點選單就能查看工作與進度。\"}]}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 8550,
+                     "name": "通知申請者已核准"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 166,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 8400
+                      }
+                     }
+                    }
+                   ]
+                  },
+                  {
+                   "id": 180,
+                   "module": "builtin:BasicRouter",
+                   "version": 1,
+                   "mapper": null,
+                   "metadata": {
+                    "designer": {
+                     "x": 600,
+                     "y": 10050,
+                     "name": "依角色換選單"
+                    }
+                   },
+                   "routes": [
+                    {
+                     "flow": [
+                      {
+                       "id": 169,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/richmenu/alias/member",
+                        "method": "GET",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 8700,
+                         "name": "取得團隊成員選單編號（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "onerror": [
+                        {
+                         "id": 168,
+                         "module": "builtin:Ignore",
+                         "version": 1,
+                         "mapper": null,
+                         "metadata": {
+                          "designer": {
+                           "x": 1200,
+                           "y": 8550
+                          }
+                         }
+                        }
+                       ],
+                       "filter": {
+                        "name": "團隊成員選單",
+                        "conditions": [
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "編劇"
+                          }
+                         ],
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "藝術總監"
+                          }
+                         ],
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "作畫監督"
+                          }
+                         ],
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "聲音總監"
+                          }
+                         ]
+                        ]
+                       }
+                      },
+                      {
+                       "id": 170,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/user/{{163.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{169.body.richMenuId}}",
+                        "method": "POST",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 8850,
+                         "name": "綁定團隊成員選單（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "id": 171,
+                       "module": "notion:updateADatabaseItem",
+                       "version": 1,
+                       "mapper": {
+                        "page": "{{163.id}}",
+                        "fields": [
+                         {
+                          "key": "目前選單",
+                          "type": "select",
+                          "value": "團隊成員"
+                         },
+                         {
+                          "key": "選單同步時間",
+                          "type": "date",
+                          "date": {
+                           "start": "{{now}}",
+                           "includeTime": true
+                          }
+                         }
+                        ],
+                        "select": "map",
+                        "updateBy": "data_source",
+                        "data_source": "👥 LINE 團隊成員 的 data source ID"
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9000,
+                         "name": "記下目前選單：團隊成員（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:notion2,notion3",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "flow": [
+                      {
+                       "id": 173,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/richmenu/alias/producer",
+                        "method": "GET",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9150,
+                         "name": "取得製作人選單編號（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "onerror": [
+                        {
+                         "id": 172,
+                         "module": "builtin:Ignore",
+                         "version": 1,
+                         "mapper": null,
+                         "metadata": {
+                          "designer": {
+                           "x": 1200,
+                           "y": 9000
+                          }
+                         }
+                        }
+                       ],
+                       "filter": {
+                        "name": "製作人選單",
+                        "conditions": [
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "製作人"
+                          }
+                         ]
+                        ]
+                       }
+                      },
+                      {
+                       "id": 174,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/user/{{163.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{173.body.richMenuId}}",
+                        "method": "POST",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9300,
+                         "name": "綁定製作人選單（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "id": 175,
+                       "module": "notion:updateADatabaseItem",
+                       "version": 1,
+                       "mapper": {
+                        "page": "{{163.id}}",
+                        "fields": [
+                         {
+                          "key": "目前選單",
+                          "type": "select",
+                          "value": "製作人"
+                         },
+                         {
+                          "key": "選單同步時間",
+                          "type": "date",
+                          "date": {
+                           "start": "{{now}}",
+                           "includeTime": true
+                          }
+                         }
+                        ],
+                        "select": "map",
+                        "updateBy": "data_source",
+                        "data_source": "👥 LINE 團隊成員 的 data source ID"
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9450,
+                         "name": "記下目前選單：製作人（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:notion2,notion3",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "flow": [
+                      {
+                       "id": 177,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/richmenu/alias/director",
+                        "method": "GET",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9600,
+                         "name": "取得導演選單編號（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "onerror": [
+                        {
+                         "id": 176,
+                         "module": "builtin:Ignore",
+                         "version": 1,
+                         "mapper": null,
+                         "metadata": {
+                          "designer": {
+                           "x": 1200,
+                           "y": 9450
+                          }
+                         }
+                        }
+                       ],
+                       "filter": {
+                        "name": "導演選單",
+                        "conditions": [
+                         [
+                          {
+                           "a": "{{if(contains(split(\"編劇,藝術總監,作畫監督,聲音總監,導演,製作人\"; \",\"); 1.role); 1.role; 163.properties_value.`申請角色`.name)}}",
+                           "o": "text:equal",
+                           "b": "導演"
+                          }
+                         ]
+                        ]
+                       }
+                      },
+                      {
+                       "id": 178,
+                       "module": "line:makeApiCall",
+                       "version": 1,
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       },
+                       "mapper": {
+                        "url": "/v2/bot/user/{{163.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{177.body.richMenuId}}",
+                        "method": "POST",
+                        "headers": []
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9750,
+                         "name": "綁定導演選單（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:line2",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "id": 179,
+                       "module": "notion:updateADatabaseItem",
+                       "version": 1,
+                       "mapper": {
+                        "page": "{{163.id}}",
+                        "fields": [
+                         {
+                          "key": "目前選單",
+                          "type": "select",
+                          "value": "導演"
+                         },
+                         {
+                          "key": "選單同步時間",
+                          "type": "date",
+                          "date": {
+                           "start": "{{now}}",
+                           "includeTime": true
+                          }
+                         }
+                        ],
+                        "select": "map",
+                        "updateBy": "data_source",
+                        "data_source": "👥 LINE 團隊成員 的 data source ID"
+                       },
+                       "metadata": {
+                        "designer": {
+                         "x": 900,
+                         "y": 9900,
+                         "name": "記下目前選單：導演（核准）"
+                        },
+                        "parameters": [
+                         {
+                          "name": "__IMTCONN__",
+                          "type": "account:notion2,notion3",
+                          "label": "Connection",
+                          "required": true
+                         }
+                        ]
+                       },
+                       "parameters": {
+                        "__IMTCONN__": 0
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 181,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "409",
+                    "body": "{\"ok\":false,\"error\":\"bad_target\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 10200,
+                     "name": "回傳不能核准"
+                    }
+                   },
+                   "filter": {
+                    "name": "不能核准",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{163.properties_value.`狀態`.name}}",
+                       "o": "text:notequal",
+                       "b": "審核中"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{163.properties_value.`LINE User ID`[].plain_text}}",
+                       "o": "notexist"
+                      }
+                     ]
+                    ]
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 185,
+               "module": "notion:getADatabaseItem",
+               "version": 1,
+               "mapper": {
+                "page": "{{1.id}}",
+                "getBy": "data_source",
+                "select": "map"
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 10650,
+                 "name": "讀申請（退回）"
+                },
+                "parameters": [
+                 {
+                  "name": "__IMTCONN__",
+                  "type": "account:notion2,notion3",
+                  "label": "Connection",
+                  "required": true
+                 }
+                ]
+               },
+               "parameters": {
+                "__IMTCONN__": 0
+               },
+               "onerror": [
+                {
+                 "id": 183,
+                 "module": "gateway:WebhookRespond",
+                 "version": 1,
+                 "parameters": {},
+                 "mapper": {
+                  "status": "409",
+                  "body": "{\"ok\":false,\"error\":\"bad_target\"}",
+                  "headers": [
+                   {
+                    "key": "Content-Type",
+                    "value": "application/json; charset=utf-8"
+                   },
+                   {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "https://<GitHub 帳號>.github.io"
+                   }
+                  ]
+                 },
+                 "metadata": {
+                  "designer": {
+                   "x": 900,
+                   "y": 10500,
+                   "name": "回傳找不到申請（退回）"
+                  }
+                 }
+                },
+                {
+                 "id": 184,
+                 "module": "builtin:Ignore",
+                 "version": 1,
+                 "mapper": null,
+                 "metadata": {
+                  "designer": {
+                   "x": 1200,
+                   "y": 10500
+                  }
+                 }
+                }
+               ],
+               "filter": {
+                "name": "退回",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "reject"
+                  },
+                  {
+                   "a": "{{1.id}}",
+                   "o": "exist"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:equal",
+                   "b": "導演"
+                  },
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "reject"
+                  },
+                  {
+                   "a": "{{1.id}}",
+                   "o": "exist"
+                  }
+                 ]
+                ]
+               }
+              },
+              {
+               "id": 191,
+               "module": "builtin:BasicRouter",
+               "version": 1,
+               "mapper": null,
+               "metadata": {
+                "designer": {
+                 "x": 600,
+                 "y": 11400,
+                 "name": "可否退回"
+                }
+               },
+               "routes": [
+                {
+                 "flow": [
+                  {
+                   "id": 186,
+                   "module": "notion:updateADatabaseItem",
+                   "version": 1,
+                   "mapper": {
+                    "page": "{{185.id}}",
+                    "fields": [
+                     {
+                      "key": "狀態",
+                      "type": "select",
+                      "value": "已退回"
+                     },
+                     {
+                      "key": "核准人",
+                      "type": "rich_text",
+                      "value": "{{105.properties_value.`姓名`[].plain_text}}"
+                     }
+                    ],
+                    "select": "map",
+                    "updateBy": "data_source",
+                    "data_source": "👥 LINE 團隊成員 的 data source ID"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 10800,
+                     "name": "退回申請"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:notion2,notion3",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "filter": {
+                    "name": "可以退回",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{185.properties_value.`狀態`.name}}",
+                       "o": "text:equal",
+                       "b": "審核中"
+                      },
+                      {
+                       "a": "{{185.properties_value.`LINE User ID`[].plain_text}}",
+                       "o": "exist"
+                      }
+                     ]
+                    ]
+                   }
+                  },
+                  {
+                   "id": 187,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "200",
+                    "body": "{\"ok\":true}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 10950,
+                     "name": "回傳已退回"
+                    }
+                   }
+                  },
+                  {
+                   "id": 189,
+                   "module": "line:makeApiCall",
+                   "version": 1,
+                   "parameters": {
+                    "__IMTCONN__": 0
+                   },
+                   "mapper": {
+                    "url": "/v2/bot/message/push",
+                    "method": "POST",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                     }
+                    ],
+                    "body": "{\"to\": \"{{185.properties_value.`LINE User ID`[].plain_text}}\", \"messages\": [{\"type\": \"text\", \"text\": \"你的團隊成員申請沒有通過。如有疑問請洽製作人，也可以修改資料後重新申請：\\nhttps://liff.line.me/LIFF ID?v=join\"}]}"
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 11100,
+                     "name": "通知申請者未通過"
+                    },
+                    "parameters": [
+                     {
+                      "name": "__IMTCONN__",
+                      "type": "account:line2",
+                      "label": "Connection",
+                      "required": true
+                     }
+                    ]
+                   },
+                   "onerror": [
+                    {
+                     "id": 188,
+                     "module": "builtin:Ignore",
+                     "version": 1,
+                     "mapper": null,
+                     "metadata": {
+                      "designer": {
+                       "x": 1200,
+                       "y": 10950
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "flow": [
+                  {
+                   "id": 190,
+                   "module": "gateway:WebhookRespond",
+                   "version": 1,
+                   "parameters": {},
+                   "mapper": {
+                    "status": "409",
+                    "body": "{\"ok\":false,\"error\":\"bad_target\"}",
+                    "headers": [
+                     {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                     },
+                     {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "https://<GitHub 帳號>.github.io"
+                     }
+                    ]
+                   },
+                   "metadata": {
+                    "designer": {
+                     "x": 900,
+                     "y": 11250,
+                     "name": "回傳不能退回"
+                    }
+                   },
+                   "filter": {
+                    "name": "不能退回",
+                    "conditions": [
+                     [
+                      {
+                       "a": "{{185.properties_value.`狀態`.name}}",
+                       "o": "text:notequal",
+                       "b": "審核中"
+                      }
+                     ],
+                     [
+                      {
+                       "a": "{{185.properties_value.`LINE User ID`[].plain_text}}",
+                       "o": "notexist"
+                      }
+                     ]
+                    ]
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "flow": [
+              {
+               "id": 193,
+               "module": "gateway:WebhookRespond",
+               "version": 1,
+               "parameters": {},
+               "mapper": {
+                "status": "403",
+                "body": "{\"ok\":false,\"error\":\"forbidden\"}",
+                "headers": [
+                 {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                 },
+                 {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "https://<GitHub 帳號>.github.io"
+                 }
+                ]
+               },
+               "metadata": {
+                "designer": {
+                 "x": 900,
+                 "y": 11700,
+                 "name": "回傳沒有權限（核准）"
+                }
+               },
+               "filter": {
+                "name": "不是製作人或導演",
+                "conditions": [
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "pending"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "notexist"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "pending"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:notequal",
+                   "b": "已核准"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "pending"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "導演"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "approve"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "notexist"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "approve"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:notequal",
+                   "b": "已核准"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "approve"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "導演"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "reject"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "notexist"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "reject"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:notequal",
+                   "b": "已核准"
+                  }
+                 ],
+                 [
+                  {
+                   "a": "{{1.a}}",
+                   "o": "text:equal",
+                   "b": "reject"
+                  },
+                  {
+                   "a": "{{105.id}}",
+                   "o": "exist"
+                  },
+                  {
+                   "a": "{{105.properties_value.`狀態`.name}}",
+                   "o": "text:equal",
+                   "b": "已核准"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "製作人"
+                  },
+                  {
+                   "a": "{{105.properties_value.`角色`.name}}",
+                   "o": "text:notequal",
+                   "b": "導演"
+                  }
+                 ]
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 196,
+       "module": "gateway:WebhookRespond",
+       "version": 1,
+       "parameters": {},
+       "mapper": {
+        "status": "400",
+        "body": "{\"ok\":false,\"error\":\"bad_request\"}",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+         },
+         {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://<GitHub 帳號>.github.io"
+         }
+        ]
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 12150,
+         "name": "回傳格式不對"
+        }
+       },
+       "filter": {
+        "name": "格式不對",
+        "conditions": [
+         [
+          {
+           "a": "{{1.a}}",
+           "o": "notexist"
+          }
+         ],
+         [
+          {
+           "a": "{{1.t}}",
+           "o": "notexist"
+          }
+         ],
+         [
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "me"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "apply"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "tasks"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "pending"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "approve"
+          },
+          {
+           "a": "{{1.a}}",
+           "o": "text:notequal",
+           "b": "reject"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "metadata": {
+  "instant": true,
+  "version": 1,
+  "designer": {
+   "orphans": []
+  },
+  "scenario": {
+   "dlq": true,
+   "slots": null,
+   "dataloss": false,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "roundtrips": 1,
+   "sequential": false,
+   "confidential": false,
+   "freshVariables": false,
+   "autoCommitTriggerLast": true
+  }
+ }
+}

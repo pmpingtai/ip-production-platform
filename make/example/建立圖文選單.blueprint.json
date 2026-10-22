@@ -1,0 +1,1411 @@
+{
+ "name": "風雅存｜建立圖文選單（手動執行）",
+ "flow": [
+  {
+   "id": 11,
+   "module": "http:ActionGetFile",
+   "version": 3,
+   "parameters": {
+    "handleErrors": false
+   },
+   "mapper": {
+    "url": "https://<GitHub 帳號>.github.io/<repo>/assets/richmenu_guest.png",
+    "method": "get",
+    "serializeUrl": false,
+    "shareCookies": false
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 150,
+     "name": "下載訪客選單圖片"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "module": "line:createARichMenu",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "name": "guest",
+    "chatBarText": "選單",
+    "selected": true,
+    "height": 843,
+    "areas": [
+     {
+      "bounds": {
+       "x": 0,
+       "y": 0,
+       "width": 2500,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=join",
+       "label": "加入團隊成員"
+      }
+     }
+    ],
+    "data": "{{11.data}}",
+    "filename": "richmenu_guest.png"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 300,
+     "name": "建立訪客選單"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 13,
+   "module": "http:ActionGetFile",
+   "version": 3,
+   "parameters": {
+    "handleErrors": false
+   },
+   "mapper": {
+    "url": "https://<GitHub 帳號>.github.io/<repo>/assets/richmenu_member.png",
+    "method": "get",
+    "serializeUrl": false,
+    "shareCookies": false
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 450,
+     "name": "下載團隊成員選單圖片"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "module": "line:createARichMenu",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "name": "member",
+    "chatBarText": "選單",
+    "selected": true,
+    "height": 843,
+    "areas": [
+     {
+      "bounds": {
+       "x": 0,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=work",
+       "label": "我的工作"
+      }
+     },
+     {
+      "bounds": {
+       "x": 1250,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=progress",
+       "label": "我的進度"
+      }
+     }
+    ],
+    "data": "{{13.data}}",
+    "filename": "richmenu_member.png"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 600,
+     "name": "建立團隊成員選單"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 15,
+   "module": "http:ActionGetFile",
+   "version": 3,
+   "parameters": {
+    "handleErrors": false
+   },
+   "mapper": {
+    "url": "https://<GitHub 帳號>.github.io/<repo>/assets/richmenu_producer.png",
+    "method": "get",
+    "serializeUrl": false,
+    "shareCookies": false
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 750,
+     "name": "下載製作人選單圖片"
+    }
+   }
+  },
+  {
+   "id": 16,
+   "module": "line:createARichMenu",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "name": "producer",
+    "chatBarText": "選單",
+    "selected": true,
+    "height": 843,
+    "areas": [
+     {
+      "bounds": {
+       "x": 0,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=approve",
+       "label": "核准團隊成員"
+      }
+     },
+     {
+      "bounds": {
+       "x": 1250,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=team",
+       "label": "團隊進度"
+      }
+     }
+    ],
+    "data": "{{15.data}}",
+    "filename": "richmenu_producer.png"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 900,
+     "name": "建立製作人選單"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 17,
+   "module": "http:ActionGetFile",
+   "version": 3,
+   "parameters": {
+    "handleErrors": false
+   },
+   "mapper": {
+    "url": "https://<GitHub 帳號>.github.io/<repo>/assets/richmenu_director.png",
+    "method": "get",
+    "serializeUrl": false,
+    "shareCookies": false
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1050,
+     "name": "下載導演選單圖片"
+    }
+   }
+  },
+  {
+   "id": 18,
+   "module": "line:createARichMenu",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "name": "director",
+    "chatBarText": "選單",
+    "selected": true,
+    "height": 843,
+    "areas": [
+     {
+      "bounds": {
+       "x": 0,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=approve",
+       "label": "核准團隊成員"
+      }
+     },
+     {
+      "bounds": {
+       "x": 1250,
+       "y": 0,
+       "width": 1250,
+       "height": 843
+      },
+      "action": {
+       "type": "uri",
+       "uri": "https://liff.line.me/LIFF ID?v=team",
+       "label": "團隊進度"
+      }
+     }
+    ],
+    "data": "{{17.data}}",
+    "filename": "richmenu_director.png"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1200,
+     "name": "建立導演選單"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 19,
+   "module": "line:makeApiCall",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "url": "/v2/bot/user/all/richmenu/{{12.richMenuId}}",
+    "method": "POST",
+    "headers": []
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1350,
+     "name": "設為所有人的預設選單（訪客）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 24,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 1800,
+     "name": "設定團隊成員選單別名"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 21,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias/member",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuId\": \"{{14.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 1500,
+         "name": "更新別名 member"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 20,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1350
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "更新別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 23,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuAliasId\": \"member\", \"richMenuId\": \"{{14.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 1650,
+         "name": "新建別名 member"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 22,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1500
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "新建別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 2250,
+     "name": "設定製作人選單別名"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 26,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias/producer",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuId\": \"{{16.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 1950,
+         "name": "更新別名 producer"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 25,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1800
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "更新別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 28,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuAliasId\": \"producer\", \"richMenuId\": \"{{16.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 2100,
+         "name": "新建別名 producer"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 27,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1950
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "新建別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 2700,
+     "name": "設定導演選單別名"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 31,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias/director",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuId\": \"{{18.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 2400,
+         "name": "更新別名 director"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 30,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 2250
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "更新別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 33,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/alias",
+        "method": "POST",
+        "headers": [
+         {
+          "key": "Content-Type",
+          "value": "application/json"
+         }
+        ],
+        "body": "{\"richMenuAliasId\": \"director\", \"richMenuId\": \"{{18.richMenuId}}\"}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 2550,
+         "name": "新建別名 director"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 32,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 2400
+          }
+         }
+        }
+       ],
+       "filter": {
+        "name": "新建別名",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 50,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 4500,
+     "name": "收尾"
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 35,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/list",
+        "method": "GET",
+        "headers": []
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 2850,
+         "name": "列出所有圖文選單"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "filter": {
+        "name": "清掉舊選單",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "id": 36,
+       "module": "builtin:BasicFeeder",
+       "version": 1,
+       "mapper": {
+        "array": "{{35.body.richmenus}}"
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 3000,
+         "name": "逐張檢查"
+        }
+       }
+      },
+      {
+       "id": 38,
+       "module": "line:makeApiCall",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "mapper": {
+        "url": "/v2/bot/richmenu/{{36.richMenuId}}",
+        "method": "DELETE",
+        "headers": []
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 3150,
+         "name": "刪除舊選單"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:line2",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "onerror": [
+        {
+         "id": 37,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "mapper": null,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 3000
+          }
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 39,
+       "module": "notion:searchObjects1",
+       "version": 1,
+       "mapper": {
+        "limit": "200",
+        "select": "data_source_item",
+        "data_source": "👥 LINE 團隊成員 的 data source ID",
+        "filter": [
+         [
+          {
+           "a": "狀態 |&*^%$#@| select",
+           "o": "select:equals",
+           "b": "已核准"
+          }
+         ]
+        ]
+       },
+       "metadata": {
+        "designer": {
+         "x": 900,
+         "y": 3300,
+         "name": "找所有已核准的成員"
+        },
+        "parameters": [
+         {
+          "name": "__IMTCONN__",
+          "type": "account:notion2,notion3",
+          "label": "Connection",
+          "required": true
+         }
+        ]
+       },
+       "parameters": {
+        "__IMTCONN__": 0
+       },
+       "filter": {
+        "name": "已核准成員重新綁定",
+        "conditions": [
+         [
+          {
+           "a": "{{12.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{14.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{16.richMenuId}}",
+           "o": "exist"
+          },
+          {
+           "a": "{{18.richMenuId}}",
+           "o": "exist"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "id": 49,
+       "module": "builtin:BasicRouter",
+       "version": 1,
+       "mapper": null,
+       "metadata": {
+        "designer": {
+         "x": 600,
+         "y": 4350,
+         "name": "依角色綁定"
+        }
+       },
+       "routes": [
+        {
+         "flow": [
+          {
+           "id": 41,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{39.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{14.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 3450,
+             "name": "綁定新的團隊成員選單"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 40,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 3300
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "團隊成員選單",
+            "conditions": [
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "編劇"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ],
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "藝術總監"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ],
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "作畫監督"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ],
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "聲音總監"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 42,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{39.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "團隊成員"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 3600,
+             "name": "記下目前選單：團隊成員（重建）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        },
+        {
+         "flow": [
+          {
+           "id": 44,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{39.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{16.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 3750,
+             "name": "綁定新的製作人選單"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 43,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 3600
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "製作人選單",
+            "conditions": [
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "製作人"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 45,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{39.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "製作人"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 3900,
+             "name": "記下目前選單：製作人（重建）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        },
+        {
+         "flow": [
+          {
+           "id": 47,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{39.properties_value.`LINE User ID`[].plain_text}}/richmenu/{{18.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 4050,
+             "name": "綁定新的導演選單"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 46,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 3900
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "導演選單",
+            "conditions": [
+             [
+              {
+               "a": "{{39.properties_value.`角色`.name}}",
+               "o": "text:equal",
+               "b": "導演"
+              },
+              {
+               "a": "{{39.properties_value.`LINE User ID`[].plain_text}}",
+               "o": "exist"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 48,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{39.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "導演"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 4200,
+             "name": "記下目前選單：導演（重建）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "metadata": {
+  "instant": false,
+  "version": 1,
+  "designer": {
+   "orphans": []
+  },
+  "scenario": {
+   "dlq": true,
+   "slots": null,
+   "dataloss": false,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "roundtrips": 1,
+   "sequential": false,
+   "confidential": false,
+   "freshVariables": false,
+   "autoCommitTriggerLast": true
+  }
+ }
+}

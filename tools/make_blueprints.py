@@ -173,9 +173,12 @@ class B:
         return {"id": mid, "module": "builtin:BasicRouter", "version": 1, "mapper": None,
                 "metadata": {"designer": {"x": 600, "y": self.y, "name": name}}, "routes": rs}
 
-    def to_json(self, name, feeder, fields):
+    def to_json(self, name, feeder, fields, keep=None):
+        """彙整成 JSON 陣列。keep 是條件運算式（不含 {{}}）：不符合的資料列各欄位留空，頁面會略過。
+        不用篩選擋掉資料列，因為全部被擋掉時彙整模組不會輸出，webhook 就收不到回應。"""
+        value = (lambda k: f"{{{{{feeder}.{k}}}}}") if keep is None else (lambda k: f"{{{{if({keep}; {feeder}.{k}; null)}}}}")
         agg = {"id": self.nid(), "module": "builtin:BasicAggregator", "version": 1, "parameters": {"feeder": feeder},
-               "mapper": {k: f"{{{{{feeder}.{k}}}}}" for k in fields}, "metadata": self.meta(f"彙整{name}")}
+               "mapper": {k: value(k) for k in fields}, "metadata": self.meta(f"彙整{name}")}
         js = {"id": self.nid(), "module": "json:TransformToJSON", "version": 1, "parameters": {"space": ""},
               "mapper": {"object": f"{{{{{agg['id']}.array}}}}"}, "metadata": self.meta(f"{name}轉成 JSON")}
         return [agg, js], f"{{{{{js['id']}.json}}}}"
@@ -301,23 +304,27 @@ def build_api():
     # ---- tasks：任務與進行中的專案。總監只拿到自己的任務，導演與製作人拿到全部 ----
     not_template = c(prop("範本任務", "checkbox"), "checkbox:equals", "false")
 
-    def tasks_branch(label, groups):
-        tasks = b.search(f"找任務（{label}）", DS_TASK, groups, limit="500")
-        t_mods, t_json = b.to_json(f"任務（{label}）", tasks["id"], ["id", "properties_value"])
+    def tasks_branch(label, only_mine):
+        tasks = b.search(f"找任務（{label}）", DS_TASK, [[not_template]], limit="500")
+        T = tasks["id"]
+        # 總監只回傳執行職掌對應到自己角色的任務。不在 Notion 查詢條件裡篩：Make 不會計算那裡的運算式，
+        # 而且 Notion 遇到不存在的單選選項會直接報錯（2026-10-22 測試時發生）
+        keep = None
+        if only_mine:
+            alias_csv = "switch(" + inner(w_role) + "; " + "; ".join(
+                f'"{r}"; "{",".join(ALIASES[r])}"' for r in CREATORS) + '; "")'
+            keep = f"contains(split({alias_csv}; \",\"); {T}.properties_value.`執行職掌`.name)"
+        t_mods, t_json = b.to_json(f"任務（{label}）", T, ["id", "properties_value"], keep)
         projects = b.search(f"找進行中的專案（{label}）", DS_PROJECT,
                             [[c(prop("專案狀態", "select"), "select:equals", "進行中")]], limit="50")
         p_mods, p_json = b.to_json(f"專案（{label}）", projects["id"], ["id", "properties_value"])
         return [tasks, *t_mods, projects, *p_mods,
                 respond(f"回傳任務（{label}）", '{"ok":true,"tasks":' + t_json + ',"projects":' + p_json + "}")]
-    # 執行職掌的條件依角色決定：不屬於這個角色的對應值換成不存在的選項，查不到任何任務
-    creator_groups = [[not_template, c(prop("執行職掌", "select"), "select:equals",
-                                       '{{if(' + inner(w_role) + f' = "{role}"; "{alias}"; "－")}}')]
-                      for role in CREATORS for alias in ALIASES[role]]
     tasks_flow = [b.router("依角色查任務", [
         (flt("導演與製作人：全部任務", [[exist, is_member, c(w_role, "text:equal", r)] for r in MANAGERS]),
-         tasks_branch("全部", [[not_template]])),
+         tasks_branch("全部", False)),
         (flt("總監：自己的任務", [[exist, is_member, c(w_role, "text:equal", r)] for r in CREATORS]),
-         tasks_branch("自己的", creator_groups)),
+         tasks_branch("自己的", True)),
         (flt("不是團隊成員（任務）", [[none], [exist, c(w_state, "text:notequal", "已核准")]]), [forbidden("回傳沒有權限（任務）")]),
     ])]
 

@@ -348,7 +348,8 @@ async function loadTasks() {
   const r = await api.tasks();
   S.projects = r.projects.map(normalizeProject).filter((p) => p.nature !== '標準範本')
     .sort((a, b) => (a.nature === '正式專案' ? 0 : 1) - (b.nature === '正式專案' ? 0 : 1));
-  S.tasks = r.tasks.map(normalizeTask);
+  // 總監的回應裡，不屬於自己角色的資料列欄位是空的（見 tools/make_blueprints.py 的 to_json）
+  S.tasks = r.tasks.filter((t) => t && t.id).map(normalizeTask);
   const asked = params.get('project');
   S.projectId = (S.projects.find((p) => p.id === asked) || S.projects[0] || {}).id ?? null;
 }

@@ -612,8 +612,14 @@ def build_events():
                 b.create("新增訪客", [fv("姓名", "title", f"（LINE）{{{{{P}.body.displayName}}}}"), fv("狀態", "select", "訪客"),
                                   fv("好友狀態", "select", "好友中"), fv("LINE 顯示名稱", "rich_text", f"{{{{{P}.body.displayName}}}}"),
                                   fv("LINE User ID", "rich_text", uid), fv("目前選單", "select", "訪客"), now("加入好友時間")])]),
+            # 封鎖時 LINE 會拿掉個人選單，解除封鎖後只剩預設的訪客選單；依名冊重新綁回去
+            #（2026-10-22 Phil 封鎖再解除封鎖後，選單停在「加入團隊成員」）
             (flt("重新加好友", [[c(typ, "text:equal", "follow"), exist]]), [
-                b.update("改回好友中", f"{{{{{W}.id}}}}", [fv("好友狀態", "select", "好友中")])]),
+                b.update("改回好友中", f"{{{{{W}.id}}}}", [fv("好友狀態", "select", "好友中"), fv("目前選單", "select", "訪客")]),
+                b.router("重新綁定選單", [
+                    (flt(f"綁回{menu}選單", [[c(expected_menu(sp(W, "狀態", ".name"), sp(W, "角色", ".name")), "text:equal", menu)]]),
+                     link_menu(b, uid, f"{{{{{W}.id}}}}", menu, "重新加好友"))
+                    for menu in ("團隊成員", "製作人", "導演")])]),
             (flt("封鎖", [[c(typ, "text:equal", "unfollow"), exist]]), [
                 b.update("標記已封鎖", f"{{{{{W}.id}}}}", [fv("好友狀態", "select", "已封鎖")])]),
         ]),

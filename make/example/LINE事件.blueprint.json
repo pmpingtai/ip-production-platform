@@ -82,14 +82,14 @@
    }
   },
   {
-   "id": 106,
+   "id": 119,
    "module": "builtin:BasicRouter",
    "version": 1,
    "mapper": null,
    "metadata": {
     "designer": {
      "x": 600,
-     "y": 900,
+     "y": 2400,
      "name": "依事件分流"
     }
    },
@@ -222,6 +222,11 @@
           "key": "好友狀態",
           "type": "select",
           "value": "好友中"
+         },
+         {
+          "key": "目前選單",
+          "type": "select",
+          "value": "訪客"
          }
         ],
         "select": "map",
@@ -262,13 +267,418 @@
          ]
         ]
        }
+      },
+      {
+       "id": 117,
+       "module": "builtin:BasicRouter",
+       "version": 1,
+       "mapper": null,
+       "metadata": {
+        "designer": {
+         "x": 600,
+         "y": 2100,
+         "name": "重新綁定選單"
+        }
+       },
+       "routes": [
+        {
+         "flow": [
+          {
+           "id": 106,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/richmenu/alias/member",
+            "method": "GET",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 750,
+             "name": "取得團隊成員選單編號（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 105,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 600
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "綁回團隊成員選單",
+            "conditions": [
+             [
+              {
+               "a": "{{if(101.properties_value.`狀態`.name = \"已核准\"; switch(101.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+               "o": "text:equal",
+               "b": "團隊成員"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 107,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{1.events[1].source.userId}}/richmenu/{{106.body.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 900,
+             "name": "綁定團隊成員選單（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           }
+          },
+          {
+           "id": 108,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{101.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "團隊成員"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1050,
+             "name": "記下目前選單：團隊成員（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        },
+        {
+         "flow": [
+          {
+           "id": 110,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/richmenu/alias/producer",
+            "method": "GET",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1200,
+             "name": "取得製作人選單編號（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 109,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 1050
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "綁回製作人選單",
+            "conditions": [
+             [
+              {
+               "a": "{{if(101.properties_value.`狀態`.name = \"已核准\"; switch(101.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+               "o": "text:equal",
+               "b": "製作人"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 111,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{1.events[1].source.userId}}/richmenu/{{110.body.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1350,
+             "name": "綁定製作人選單（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           }
+          },
+          {
+           "id": 112,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{101.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "製作人"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1500,
+             "name": "記下目前選單：製作人（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        },
+        {
+         "flow": [
+          {
+           "id": 114,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/richmenu/alias/director",
+            "method": "GET",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1650,
+             "name": "取得導演選單編號（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "onerror": [
+            {
+             "id": 113,
+             "module": "builtin:Ignore",
+             "version": 1,
+             "mapper": null,
+             "metadata": {
+              "designer": {
+               "x": 1200,
+               "y": 1500
+              }
+             }
+            }
+           ],
+           "filter": {
+            "name": "綁回導演選單",
+            "conditions": [
+             [
+              {
+               "a": "{{if(101.properties_value.`狀態`.name = \"已核准\"; switch(101.properties_value.`角色`.name; \"製作人\"; \"製作人\"; \"導演\"; \"導演\"; \"團隊成員\"); \"訪客\")}}",
+               "o": "text:equal",
+               "b": "導演"
+              }
+             ]
+            ]
+           }
+          },
+          {
+           "id": 115,
+           "module": "line:makeApiCall",
+           "version": 1,
+           "parameters": {
+            "__IMTCONN__": 0
+           },
+           "mapper": {
+            "url": "/v2/bot/user/{{1.events[1].source.userId}}/richmenu/{{114.body.richMenuId}}",
+            "method": "POST",
+            "headers": []
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1800,
+             "name": "綁定導演選單（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:line2",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           }
+          },
+          {
+           "id": 116,
+           "module": "notion:updateADatabaseItem",
+           "version": 1,
+           "mapper": {
+            "page": "{{101.id}}",
+            "fields": [
+             {
+              "key": "目前選單",
+              "type": "select",
+              "value": "導演"
+             },
+             {
+              "key": "選單同步時間",
+              "type": "date",
+              "date": {
+               "start": "{{now}}",
+               "includeTime": true
+              }
+             }
+            ],
+            "select": "map",
+            "updateBy": "data_source",
+            "data_source": "👥 LINE 團隊成員 的 data source ID"
+           },
+           "metadata": {
+            "designer": {
+             "x": 900,
+             "y": 1950,
+             "name": "記下目前選單：導演（重新加好友）"
+            },
+            "parameters": [
+             {
+              "name": "__IMTCONN__",
+              "type": "account:notion2,notion3",
+              "label": "Connection",
+              "required": true
+             }
+            ]
+           },
+           "parameters": {
+            "__IMTCONN__": 0
+           }
+          }
+         ]
+        }
+       ]
       }
      ]
     },
     {
      "flow": [
       {
-       "id": 105,
+       "id": 118,
        "module": "notion:updateADatabaseItem",
        "version": 1,
        "mapper": {
@@ -287,7 +697,7 @@
        "metadata": {
         "designer": {
          "x": 900,
-         "y": 750,
+         "y": 2250,
          "name": "標記已封鎖"
         },
         "parameters": [

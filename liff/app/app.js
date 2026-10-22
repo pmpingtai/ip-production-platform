@@ -275,6 +275,8 @@ document.addEventListener('click', async (e) => {
 });
 
 async function sendApply() {
+  // 送出時直接讀畫面上的值：手機 LINE 的下拉選單不一定會觸發 change（2026-10-22 選了製作人卻送出編劇）
+  S.form = { name: $('#fName').value, role: $('#fRole').value, note: $('#fNote').value };
   const f = { name: S.form.name.trim(), role: S.form.role, note: S.form.note.trim() };
   if (!f.name) return toast('請填寫真實姓名');
   if (!f.role) return toast('請選擇角色');

@@ -124,6 +124,7 @@ function render() {
   badge.hidden = !S.me || st === 'guest';
   badge.className = `badge ${st === 'pending' ? 'pending' : st === 'member' ? '' : 'muted'}`;
   badge.textContent = st === 'member' ? S.me.role : st === 'pending' ? '審核中' : st === 'rejected' ? '未通過' : st === 'disabled' ? '停用' : '';
+  $('#navBack').hidden = !canGoBack();
   $('#bar').hidden = true;
   $('#tabs').hidden = true;
   $('#project').hidden = true;
@@ -291,6 +292,7 @@ function renderApprove() {
 
 // ---- 工作項目（明細、交件、審核） ----
 const plain = (v) => (Array.isArray(v) ? v.map((x) => x.plain_text ?? x.text?.content ?? '').join('') : v?.name ?? (typeof v === 'string' ? v : ''));
+const when = (iso) => (iso ? `（${fmtTime(iso)}）` : '');
 const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const SAVE_STATUSES = ['尚未開始', '執行創作中', '待審核'];
 // 和 Make 的規則相同（tools/make_blueprints.py 的 version_v）：第一次送審沿用或從 V1 開始，之後每次送審加一
@@ -376,8 +378,8 @@ function statusCard(t) {
   const parts = [];
   if (t.status === '待審核') {
     parts.push(t.own
-      ? `<p>你已送審 <b>${esc(t.version)}</b>（${fmtTime(t.submittedAt)}），等導演或製作人審核。</p>`
-      : `<p><b>${esc(t.submitter)}</b> 在 ${fmtTime(t.submittedAt)} 送審 <b>${esc(t.version)}</b>${isApprover() ? '，請審核。' : '。'}</p>`);
+      ? `<p>你已送審 <b>${esc(t.version)}</b>${when(t.submittedAt)}，等導演或製作人審核。</p>`
+      : `<p><b>${esc(t.submitter || '執行者')}</b>${t.submittedAt ? ` 在 ${fmtTime(t.submittedAt)}` : ''} 送審 <b>${esc(t.version)}</b>${isApprover() ? '，請審核。' : '。'}</p>`);
     if (prevReturn) {
       parts.push(`<div class="compare">${quote(`上一版 ${esc(prevReturn.version)} 的審核意見・${esc(who(prevReturn.role, prevReturn.name))}`, prevReturn.note, 'warn')}
         ${quote(`這一版 ${esc(t.version)} 的說明・${esc(lastSubmit?.name || t.submitter)}`, lastSubmit?.note || '')}</div>`);
@@ -385,10 +387,10 @@ function statusCard(t) {
       parts.push(quote(`送審說明・${esc(lastSubmit.name)}`, lastSubmit.note));
     }
   } else if (t.status === '退回修改') {
-    parts.push(`<p><b>${esc(t.version)}</b> 被 ${esc(t.reviewer)} 退回（${fmtTime(t.reviewedAt)}）。</p>`, quote('審核意見', t.comment, 'warn'));
+    parts.push(`<p><b>${esc(t.version)}</b> 被 ${esc(t.reviewer)} 退回${when(t.reviewedAt)}。</p>`, quote('審核意見', t.comment, 'warn'));
     if (t.own) parts.push(`<p class="muted">修改後，狀態選「待審核」儲存即可再送審，會記為 <b>${esc(nextVersion(t))}</b>。</p>`);
   } else if (t.status === '已核准') {
-    parts.push(`<p><b>${esc(t.version)}</b> 已由 ${esc(t.reviewer)} 核准（${fmtTime(t.reviewedAt)}）。</p>`);
+    parts.push(`<p><b>${esc(t.version)}</b> 已由 ${esc(t.reviewer)} 核准${when(t.reviewedAt)}。</p>`);
     if (t.comment) parts.push(quote('審核意見', t.comment));
   } else if (lastReturn) {
     parts.push(`<p>${esc(lastReturn.version)} 被退回後修改中（${esc(t.status)}）。</p>`, quote(`上一次的審核意見・${esc(who(lastReturn.role, lastReturn.name))}`, lastReturn.note, 'warn'));
@@ -413,13 +415,12 @@ function historyCard(t) {
 
 function renderTask() {
   const d = S.detail;
-  const back = `<button class="ghost" id="back">← 返回${TITLES[d.from] || ''}</button>`;
-  if (!d.data) { $('#app').innerHTML = `${back}<p class="blocked">讀取工作項目中…</p>`; return; }
+  if (!d.data) { $('#app').innerHTML = '<p class="blocked">讀取工作項目中…</p>'; return; }
   const t = d.data;
   const canEdit = t.own && t.status !== '已核准';
   const canReview = isApprover() && t.status === '待審核';
   const current = deliverables([...t.files.map((f) => [f.url, f.name]), [t.link, '雲端連結']]);
-  const html = [back, `<section class="card">
+  const html = [`<section class="card">
     <div class="row-head"><span class="chip" data-s="${esc(t.status)}">${esc(t.status)}</span><span class="r-nums">${esc(t.version || '尚無版本')}</span></div>
     <h1 class="t-title">${esc(t.name)}</h1>
     <p class="lead">${esc([t.stage, t.workflow, t.executor].filter(Boolean).join(' · '))}</p>
@@ -455,38 +456,70 @@ function renderTask() {
   $('#app').innerHTML = html.join('');
 }
 
-// 我的進度點數字 → 到我的工作看那些工作；我的工作、團隊進度點數字 → 原畫面篩選。key 空字串＝取消篩選
-function applyFilter(key) {
-  S.filter = key || null;
-  if (S.filter && S.view === 'progress') S.view = 'work';
-  setUrl({ v: S.view, f: S.filter });
-  render(); scrollTo(0, 0);
-}
+// ===== 頁內導覽 =====
+// LIFF 沒有瀏覽器的上一頁鍵，按右上角 ✕ 會直接關掉整個頁面回到 LINE。所以每往下一層（點工作、點數字篩選、
+// 前往我的工作）都記一筆瀏覽紀錄：左上角「‹ 返回」和手機的返回鍵都回到上一個畫面。
+// 紀錄內容：v 畫面、f 篩選、g 團隊進度的組別、id 工作項目、d 第幾層（0＝從 LINE 選單打開的第一頁）
+const depth = () => history.state?.d || 0;
+const homeView = () => (!isMember() ? 'join' : isManager() ? 'team' : 'work');
+// 從 LINE 選單直接打開的第一頁不用返回；工作項目、篩選後的清單一定有返回（沒有上一頁就回這個角色的首頁）
+const canGoBack = () => depth() > 0 || S.view === 'task' || !!S.filter;
+const snapshot = () => ({ v: S.view, f: S.filter, g: S.group, id: S.view === 'task' ? S.detail.id : null });
 
-// 換畫面時改網址（保留 as、project 等其他參數），重新整理會停在同一個畫面
-function setUrl(kv) {
+// 網址跟著畫面改（保留 as、project 等其他參數），重新整理會停在同一個畫面
+function urlOf(s) {
   const q = new URLSearchParams(location.search);
-  for (const [k, v] of Object.entries(kv)) if (v == null) q.delete(k); else q.set(k, v);
-  history.replaceState(null, '', `?${q}`);
+  for (const [k, v] of Object.entries({ v: s.v, f: s.f, id: s.id })) if (v == null) q.delete(k); else q.set(k, v);
+  return `?${q}`;
 }
 
-async function openTask(id, from = S.view) {
-  S.detail = { id, from: from === 'task' ? S.detail.from : from, data: null, file: null, busy: false };
+async function go(next, { replace = false } = {}) {
+  const s = { ...snapshot(), id: null, ...next };
+  s.d = depth() + (replace ? 0 : 1);
+  s.p = replace ? history.state?.p : S.view;   // 從哪個畫面來的
+  if (replace && s.d === 0) delete s.p;
+  history[replace ? 'replaceState' : 'pushState'](s, '', urlOf(s));
+  await show(s);
+}
+
+async function show(s) {
+  S.view = s.v; S.filter = s.f || null; S.group = s.g || '全部';
+  scrollTo(0, 0);
+  try {
+    if (s.v === 'task') return await openTask(s.id);
+    render();
+    if (s.v === 'approve' && isApprover()) { S.pending = parsePending((await api.pending()).members); render(); return; }
+    // 交件或審核後清單會清空，回到清單時重新讀取
+    if (['work', 'progress', 'team'].includes(s.v) && !S.tasks) { await loadTasks(); render(); }
+  } catch (x) {
+    if (!handleApiError(x)) blocked('暫時無法讀取', '請稍後再試。');
+  }
+}
+
+function goBack() {
+  if (depth() > 0) return history.back();
+  // 沒有上一頁（從 LINE 選單或連結直接打開）：工作項目回角色首頁，篩選清單回同一頁的全部
+  return go({ v: S.view === 'task' ? homeView() : S.view, f: null }, { replace: true });
+}
+window.addEventListener('popstate', (e) => { if (e.state) show(e.state); });
+
+// 我的進度點數字 → 到我的工作看那些工作；我的工作、團隊進度點數字 → 原畫面篩選。key 空字串＝顯示全部（取代目前這筆）
+function applyFilter(key) {
+  // 在同一頁篩選的（我的工作、團隊進度），顯示全部＝回上一頁，免得返回時又停在同一頁
+  if (!key) return depth() > 0 && history.state?.p === S.view ? history.back() : go({ f: null }, { replace: true });
+  return go({ v: S.view === 'progress' ? 'work' : S.view, f: key });
+}
+
+// 只負責讀取並顯示工作項目；換畫面與返回由 go／show 處理。交件、審核後直接呼叫它重新讀取
+async function openTask(id) {
+  S.detail = { id, data: null, file: null, busy: false };
   S.view = 'task';
-  setUrl({ v: 'task', id });
-  render(); scrollTo(0, 0);
+  render();
   try { S.detail.data = parseDetail(await api.task(id)); render(); }
   catch (x) {
     if (handleApiError(x)) return;
     blocked(x.code === 'not_found' ? '找不到這項工作' : '暫時無法讀取', x.code === 'not_found' ? '可能已被刪除或移到其他專案。' : '請稍後再試。');
   }
-}
-
-async function goBack() {
-  S.view = S.detail.from || (isManager() ? 'team' : 'work');
-  setUrl({ v: S.view, id: null });
-  if (!S.tasks) await loadTasks();
-  render(); scrollTo(0, 0);
 }
 
 // 照片縮成 1600px JPEG；其他檔案原樣讀成 base64
@@ -525,7 +558,7 @@ async function saveTask() {
     await api.save(f);
     toast(f.status === '待審核' ? '已送審，導演與製作人可在團隊進度看到' : '已儲存');
     S.tasks = null;   // 回到清單時重新讀取
-    await openTask(d.id, d.from);
+    await openTask(d.id);
   } catch (x) {
     d.busy = false;
     if (handleApiError(x)) return;
@@ -544,12 +577,12 @@ async function reviewTask(decision) {
     await api.review(d.id, decision, comment);
     toast(decision === 'approve' ? '已核准' : '已退回，成員可在我的工作看到審核意見');
     S.tasks = null;
-    await openTask(d.id, d.from);
+    await openTask(d.id);
   } catch (x) {
     d.busy = false;
     if (handleApiError(x)) return;
     toast(x.code === 'bad_target' ? '這項工作已經不是待審核了' : '操作失敗，請再試一次');
-    if (x.code === 'bad_target') return openTask(d.id, d.from);
+    if (x.code === 'bad_target') return openTask(d.id);
     render();
   }
 }
@@ -576,25 +609,28 @@ document.addEventListener('change', async (e) => {
   }
 });
 document.addEventListener('click', async (e) => {
+  // 頁面裡的「?v=…」連結（前往我的工作等）改成頁內換畫面，才有上一頁可以回
+  const link = e.target.closest('a[href^="?v="]');
+  if (link) { e.preventDefault(); return go({ v: new URLSearchParams(link.getAttribute('href')).get('v'), f: null }); }
   const tab = e.target.closest('[data-group]');
-  if (tab) { S.group = tab.dataset.group; render(); scrollTo(0, 0); return; }
+  if (tab) return go({ g: tab.dataset.group }, { replace: true });
   const fb = e.target.closest('[data-filter]');
   if (fb) return applyFilter(fb.dataset.filter);
   const item = e.target.closest('[data-task]');
-  if (item && !e.target.closest('a')) return openTask(item.dataset.task);
+  if (item && !e.target.closest('a')) return go({ v: 'task', id: item.dataset.task });
   const t = e.target.closest('button');
   if (!t) return;
+  if (t.id === 'navBack') return goBack();
   if (t.id === 'edit') { S.editing = true; render(); return; }
   if (t.id === 'cancelEdit') { S.editing = false; render(); return; }
   if (t.id === 'send' && !S.busy) return sendApply();
-  if (t.id === 'back') return goBack();
   if (t.id === 'saveTask' && !S.detail.busy) return saveTask();
   if (t.dataset.review && !S.detail.busy) return reviewTask(t.dataset.review);
   if (t.dataset.act) return decide(t.closest('.applicant'), t.dataset.act);
 });
 document.addEventListener('keydown', (e) => {
   const item = e.target.closest?.('[data-task]');
-  if (item && e.key === 'Enter') openTask(item.dataset.task);
+  if (item && e.key === 'Enter') go({ v: 'task', id: item.dataset.task });
 });
 
 async function sendApply() {
@@ -697,14 +733,14 @@ async function loadTasks() {
     S.me = await api.me();
     if (S.me.state !== 'member') S.form = { name: S.me.state === 'guest' ? '' : S.me.name, role: S.me.applyRole || '', note: S.me.note || '' };
     // 沒指定畫面時：團隊成員到我的工作，製作人／導演到團隊進度，其他人到加入團隊成員
-    if (!S.view) S.view = !isMember() ? 'join' : isManager() ? 'team' : 'work';
+    if (!S.view) S.view = homeView();
+    if (S.view === 'task' && !S.detail.id) S.view = homeView();
+    // 從 LINE 選單打開的這一頁是第 0 層
+    history.replaceState({ ...snapshot(), d: 0 }, '', location.search);
     render();
     if (!isMember() || S.view === 'join') return;
-    if (S.view === 'approve') { if (isApprover()) { S.pending = parsePending((await api.pending()).members); render(); } return; }
     // ?v=task&id= 直接打開某一項工作（推播連結用；目前沒有推播，仍保留）
-    if (S.view === 'task') return S.detail.id ? openTask(S.detail.id, isManager() ? 'team' : 'work') : goBack();
-    await loadTasks();
-    render();
+    await show(history.state);
   } catch (e) {
     if (!handleApiError(e)) blocked('暫時無法讀取', '請稍後再開一次。');
   }

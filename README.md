@@ -65,7 +65,10 @@ node --test test/stats.test.mjs
 - 用 API 建立的 HTTP 模組要補上預設值（`HTTP_DEFAULTS`），否則請求不會送出。
 - HTTP 模組遇到 4xx 會中斷整個執行；錯誤處理路線要放 Webhook response＋Ignore，頁面才收得到錯誤。
 - Router 一定是路線的最後一個模組，後面接的模組不會執行。
-- 匯入 webhook 觸發的情境後，確認排程仍是「Immediately」；曾發生匯入後變成每 15 分鐘，頁面只收到「Accepted」。
+- 匯入 webhook 觸發的情境後，確認排程仍是「Immediately」；**重新匯入到既有情境也會被重設成每 15 分鐘**（2026-10-22 LIFF API 發生過），頁面只收到「Accepted」。手動執行的情境同樣要改回「On demand」。
+- 模組放進 router 之後才設定的篩選不會進藍圖（router 會複製模組）。2026-10-22「刪除舊選單」的篩選因此沒生效，把新建的四張選單也刪了。
+- Notion「Search Objects」的查詢條件不會計算 `{{ }}` 運算式；而且 Notion 遇到不存在的單選選項會回 400。依角色篩任務改在彙整時做（`to_json` 的 `keep`）。
+- 「Make an API Call」遇到 4xx 不一定會中斷，執行紀錄仍顯示成功；要確認結果時看執行紀錄裡每個模組的輸出，不要只看 SUCCESS。
 - 「Create a Rich Menu」勾了 selected 會把剛建好的那張設成預設，所以「設為預設選單」放在四張都建完之後。
 - 只偶爾手動執行的情境（建立圖文選單）排程設成「On demand」並保持開啟。
 - Notion 欄位一改名，Make 就讀不到。名冊建好後請鎖定資料庫。

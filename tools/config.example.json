@@ -1,0 +1,35 @@
+{
+  "_說明": "複製成 config.local.json 再填入實際 ID（config.local.json 不進版本庫）。數字欄位填 Make 的編號。",
+  "project": "風雅存",
+  "make": {
+    "team_id": 0,
+    "folder_id": 0,
+    "api_hook_id": 0,
+    "events_hook_id": 0,
+    "notion_connection_id": 0,
+    "line_connection_id": 0,
+    "drive_connection_id": 0,
+    "drive_folder_id": "交件檔案的雲端硬碟資料夾 ID（設成知道連結的人都能檢視）"
+  },
+  "line": {
+    "login_channel_id": "LINE Login channel 的 Channel ID",
+    "liff_id": "LIFF ID",
+    "push": false
+  },
+  "notion": {
+    "members_ds": "👥 LINE 團隊成員 的 data source ID",
+    "tasks_ds": "📋 製作流程查核總表 的 data source ID",
+    "projects_ds": "📁 多專案任務總管理 的 data source ID",
+    "reviews_ds": "📝 審核紀錄 的 data source ID",
+    "reviews_db": "📝 審核紀錄 的 database ID",
+    "assign_ds": "🧩 專案角色 的 data source ID",
+    "assign_db": "🧩 專案角色 的 database ID",
+    "ip_ds": "專案 IP 資料庫（七個雲端資料夾分類）的 data source ID",
+    "tasks_db": "📋 製作流程查核總表 的 database ID",
+    "push_db": "📣 專案推播 的 database ID",
+    "template_db": "📐 動畫專案範本任務 的 database ID",
+    "ip_db": "專案 IP 資料庫 的 database ID"
+  },
+  "pages_base": "https://<GitHub 帳號>.github.io/<repo>",
+  "page_origin": "https://<GitHub 帳號>.github.io"
+}

@@ -1,0 +1,7 @@
+tools/config.local.json
+make/*.blueprint.json
+node_modules/
+__pycache__/
+
+# 部署與維運文件只留在本機
+docs/

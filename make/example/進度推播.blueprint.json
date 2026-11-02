@@ -1,0 +1,746 @@
+{
+ "name": "風雅存｜進度推播（每小時）",
+ "flow": [
+  {
+   "id": 11,
+   "module": "notion:makeApiCall",
+   "version": 1,
+   "mapper": {
+    "url": "/v1/databases/📣 專案推播 的 database ID/query",
+    "method": "POST",
+    "version": "2022-06-28",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "qs": [],
+    "body": "{\"filter\": {\"and\": [{\"property\": \"每日推播\", \"checkbox\": {\"equals\": true}}, {\"property\": \"推播時間\", \"number\": {\"equals\": {{parseNumber(formatDate(now; \"H\"; \"Asia/Taipei\"))}}}}]}, \"page_size\": 50}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 150,
+     "name": "找這個整點要推播的專案"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   }
+  },
+  {
+   "id": 12,
+   "module": "builtin:BasicFeeder",
+   "version": 1,
+   "mapper": {
+    "array": "{{11.body.results}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 300,
+     "name": "逐一處理專案"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "module": "util:SetVariables",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "variables": [
+     {
+      "name": "p",
+      "value": "{{first(map(12.properties.`專案`.relation; \"id\"))}}"
+     }
+    ],
+    "scope": "roundtrip"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 450,
+     "name": "這個專案"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "module": "notion:makeApiCall",
+   "version": 1,
+   "mapper": {
+    "url": "/v1/databases/📣 專案推播 的 database ID/query",
+    "method": "POST",
+    "version": "2022-06-28",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "qs": [],
+    "body": "{\"filter\": {\"property\": \"專案\", \"relation\": {\"contains\": \"{{13.p}}\"}}, \"page_size\": 100}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 600,
+     "name": "讀推播設定（每日）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   }
+  },
+  {
+   "id": 15,
+   "module": "notion:makeApiCall",
+   "version": 1,
+   "mapper": {
+    "url": "/v1/databases/📋 製作流程查核總表 的 database ID/query",
+    "method": "POST",
+    "version": "2022-06-28",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "qs": [],
+    "body": "{\"filter\": {\"and\": [{\"property\": \"所屬專案\", \"relation\": {\"contains\": \"{{13.p}}\"}}, {\"property\": \"範本任務\", \"checkbox\": {\"equals\": false}}]}, \"page_size\": 100}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 750,
+     "name": "讀專案任務（每日）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   }
+  },
+  {
+   "id": 16,
+   "module": "notion:makeApiCall",
+   "version": 1,
+   "mapper": {
+    "url": "/v1/databases/🧩 專案角色 的 database ID/query",
+    "method": "POST",
+    "version": "2022-06-28",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "qs": [],
+    "body": "{\"filter\": {\"and\": [{\"property\": \"專案\", \"relation\": {\"contains\": \"{{13.p}}\"}}, {\"property\": \"狀態\", \"select\": {\"equals\": \"已核准\"}}]}, \"page_size\": 100}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 900,
+     "name": "讀專案成員（每日）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   }
+  },
+  {
+   "id": 17,
+   "module": "util:SetVariables",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "variables": [
+     {
+      "name": "codes",
+      "value": "{{join(map(15.body.results; \"properties.推播碼.formula.string\"); \"\")}}"
+     },
+     {
+      "name": "snap",
+      "value": "{{ifempty(first(map(14.body.results; \"properties.數字碼.formula.string\")); \"\")}}"
+     },
+     {
+      "name": "page",
+      "value": "{{first(map(14.body.results; \"id\"))}}"
+     },
+     {
+      "name": "name",
+      "value": "{{first(map(14.body.results; \"properties.專案名.formula.string\"))}}"
+     },
+     {
+      "name": "ids",
+      "value": "{{join(deduplicate(remove(map(16.body.results; \"properties.推播對象.formula.string\"); \"\")); \",\")}}"
+     }
+    ],
+    "scope": "roundtrip"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1050,
+     "name": "推播資料（每日）"
+    }
+   },
+   "filter": {
+    "name": "有推播設定",
+    "conditions": [
+     [
+      {
+       "a": "{{first(map(14.body.results; \"id\"))}}",
+       "o": "exist"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "id": 18,
+   "module": "util:SetVariables",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "variables": [
+     {
+      "name": "n1",
+      "value": "{{(length(split(17.codes; \"|編劇:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o1",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|編劇:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 1)))}}"
+     },
+     {
+      "name": "n2",
+      "value": "{{(length(split(17.codes; \"|編劇:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o2",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|編劇:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 2)))}}"
+     },
+     {
+      "name": "n3",
+      "value": "{{(length(split(17.codes; \"|編劇:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o3",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|編劇:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 3)))}}"
+     },
+     {
+      "name": "n4",
+      "value": "{{(length(split(17.codes; \"|編劇:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o4",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|編劇:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 4)))}}"
+     },
+     {
+      "name": "n5",
+      "value": "{{(length(split(17.codes; \"|編劇:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o5",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|編劇:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 5)))}}"
+     },
+     {
+      "name": "n6",
+      "value": "{{(length(split(17.codes; \"|藝術總監:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o6",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|藝術總監:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 6)))}}"
+     },
+     {
+      "name": "n7",
+      "value": "{{(length(split(17.codes; \"|藝術總監:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o7",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|藝術總監:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 7)))}}"
+     },
+     {
+      "name": "n8",
+      "value": "{{(length(split(17.codes; \"|藝術總監:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o8",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|藝術總監:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 8)))}}"
+     },
+     {
+      "name": "n9",
+      "value": "{{(length(split(17.codes; \"|藝術總監:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o9",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|藝術總監:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 9)))}}"
+     },
+     {
+      "name": "n10",
+      "value": "{{(length(split(17.codes; \"|藝術總監:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o10",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|藝術總監:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 10)))}}"
+     },
+     {
+      "name": "n11",
+      "value": "{{(length(split(17.codes; \"|動畫總監:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o11",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|動畫總監:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 11)))}}"
+     },
+     {
+      "name": "n12",
+      "value": "{{(length(split(17.codes; \"|動畫總監:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o12",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|動畫總監:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 12)))}}"
+     },
+     {
+      "name": "n13",
+      "value": "{{(length(split(17.codes; \"|動畫總監:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o13",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|動畫總監:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 13)))}}"
+     },
+     {
+      "name": "n14",
+      "value": "{{(length(split(17.codes; \"|動畫總監:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o14",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|動畫總監:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 14)))}}"
+     },
+     {
+      "name": "n15",
+      "value": "{{(length(split(17.codes; \"|動畫總監:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o15",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|動畫總監:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 15)))}}"
+     },
+     {
+      "name": "n16",
+      "value": "{{(length(split(17.codes; \"|聲音總監:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o16",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|聲音總監:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 16)))}}"
+     },
+     {
+      "name": "n17",
+      "value": "{{(length(split(17.codes; \"|聲音總監:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o17",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|聲音總監:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 17)))}}"
+     },
+     {
+      "name": "n18",
+      "value": "{{(length(split(17.codes; \"|聲音總監:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o18",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|聲音總監:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 18)))}}"
+     },
+     {
+      "name": "n19",
+      "value": "{{(length(split(17.codes; \"|聲音總監:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o19",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|聲音總監:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 19)))}}"
+     },
+     {
+      "name": "n20",
+      "value": "{{(length(split(17.codes; \"|聲音總監:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o20",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|聲音總監:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 20)))}}"
+     },
+     {
+      "name": "n21",
+      "value": "{{(length(split(17.codes; \"|製片人:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o21",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|製片人:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 21)))}}"
+     },
+     {
+      "name": "n22",
+      "value": "{{(length(split(17.codes; \"|製片人:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o22",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|製片人:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 22)))}}"
+     },
+     {
+      "name": "n23",
+      "value": "{{(length(split(17.codes; \"|製片人:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o23",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|製片人:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 23)))}}"
+     },
+     {
+      "name": "n24",
+      "value": "{{(length(split(17.codes; \"|製片人:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o24",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|製片人:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 24)))}}"
+     },
+     {
+      "name": "n25",
+      "value": "{{(length(split(17.codes; \"|製片人:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o25",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|製片人:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 25)))}}"
+     },
+     {
+      "name": "n26",
+      "value": "{{(length(split(17.codes; \"|副製片:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o26",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|副製片:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 26)))}}"
+     },
+     {
+      "name": "n27",
+      "value": "{{(length(split(17.codes; \"|副製片:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o27",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|副製片:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 27)))}}"
+     },
+     {
+      "name": "n28",
+      "value": "{{(length(split(17.codes; \"|副製片:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o28",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|副製片:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 28)))}}"
+     },
+     {
+      "name": "n29",
+      "value": "{{(length(split(17.codes; \"|副製片:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o29",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|副製片:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 29)))}}"
+     },
+     {
+      "name": "n30",
+      "value": "{{(length(split(17.codes; \"|副製片:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o30",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|副製片:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 30)))}}"
+     },
+     {
+      "name": "n31",
+      "value": "{{(length(split(17.codes; \"|導演:尚未開始|\")) - 1)}}"
+     },
+     {
+      "name": "o31",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|導演:尚未開始|\")) - 1); parseNumber(get(split(17.snap; \",\"); 31)))}}"
+     },
+     {
+      "name": "n32",
+      "value": "{{(length(split(17.codes; \"|導演:執行創作中|\")) - 1)}}"
+     },
+     {
+      "name": "o32",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|導演:執行創作中|\")) - 1); parseNumber(get(split(17.snap; \",\"); 32)))}}"
+     },
+     {
+      "name": "n33",
+      "value": "{{(length(split(17.codes; \"|導演:待審核|\")) - 1)}}"
+     },
+     {
+      "name": "o33",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|導演:待審核|\")) - 1); parseNumber(get(split(17.snap; \",\"); 33)))}}"
+     },
+     {
+      "name": "n34",
+      "value": "{{(length(split(17.codes; \"|導演:退回修改|\")) - 1)}}"
+     },
+     {
+      "name": "o34",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|導演:退回修改|\")) - 1); parseNumber(get(split(17.snap; \",\"); 34)))}}"
+     },
+     {
+      "name": "n35",
+      "value": "{{(length(split(17.codes; \"|導演:已核准|\")) - 1)}}"
+     },
+     {
+      "name": "o35",
+      "value": "{{if(17.snap = \"\"; (length(split(17.codes; \"|導演:已核准|\")) - 1); parseNumber(get(split(17.snap; \",\"); 35)))}}"
+     }
+    ],
+    "scope": "roundtrip"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1200,
+     "name": "推播件數（每日）"
+    }
+   }
+  },
+  {
+   "id": 19,
+   "module": "util:SetVariables",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "variables": [
+     {
+      "name": "snap",
+      "value": "{{18.n1}},{{18.n2}},{{18.n3}},{{18.n4}},{{18.n5}},{{18.n6}},{{18.n7}},{{18.n8}},{{18.n9}},{{18.n10}},{{18.n11}},{{18.n12}},{{18.n13}},{{18.n14}},{{18.n15}},{{18.n16}},{{18.n17}},{{18.n18}},{{18.n19}},{{18.n20}},{{18.n21}},{{18.n22}},{{18.n23}},{{18.n24}},{{18.n25}},{{18.n26}},{{18.n27}},{{18.n28}},{{18.n29}},{{18.n30}},{{18.n31}},{{18.n32}},{{18.n33}},{{18.n34}},{{18.n35}}"
+     },
+     {
+      "name": "total",
+      "value": "{{18.n1 + 18.n2 + 18.n3 + 18.n4 + 18.n5 + 18.n6 + 18.n7 + 18.n8 + 18.n9 + 18.n10 + 18.n11 + 18.n12 + 18.n13 + 18.n14 + 18.n15 + 18.n16 + 18.n17 + 18.n18 + 18.n19 + 18.n20 + 18.n21 + 18.n22 + 18.n23 + 18.n24 + 18.n25 + 18.n26 + 18.n27 + 18.n28 + 18.n29 + 18.n30 + 18.n31 + 18.n32 + 18.n33 + 18.n34 + 18.n35}}"
+     },
+     {
+      "name": "done",
+      "value": "{{18.n5 + 18.n10 + 18.n15 + 18.n20 + 18.n25 + 18.n30 + 18.n35}}"
+     },
+     {
+      "name": "done_old",
+      "value": "{{18.o5 + 18.o10 + 18.o15 + 18.o20 + 18.o25 + 18.o30 + 18.o35}}"
+     },
+     {
+      "name": "t0",
+      "value": "{{18.n1 + 18.n2 + 18.n3 + 18.n4 + 18.n5}}"
+     },
+     {
+      "name": "t1",
+      "value": "{{18.n6 + 18.n7 + 18.n8 + 18.n9 + 18.n10}}"
+     },
+     {
+      "name": "t2",
+      "value": "{{18.n11 + 18.n12 + 18.n13 + 18.n14 + 18.n15}}"
+     },
+     {
+      "name": "t3",
+      "value": "{{18.n16 + 18.n17 + 18.n18 + 18.n19 + 18.n20}}"
+     },
+     {
+      "name": "t4",
+      "value": "{{18.n21 + 18.n22 + 18.n23 + 18.n24 + 18.n25}}"
+     },
+     {
+      "name": "t5",
+      "value": "{{18.n26 + 18.n27 + 18.n28 + 18.n29 + 18.n30}}"
+     },
+     {
+      "name": "t6",
+      "value": "{{18.n31 + 18.n32 + 18.n33 + 18.n34 + 18.n35}}"
+     }
+    ],
+    "scope": "roundtrip"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1350,
+     "name": "推播總計（每日）"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "module": "util:SetVariables",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "variables": [
+     {
+      "name": "msg",
+      "value": "📣 {{17.name}}｜進度 {{formatDate(now; \"M/D HH:mm\"; \"Asia/Taipei\")}}\n全案 已核准 {{if(19.done != 19.done_old; 19.done_old; \"\")}}{{if(19.done != 19.done_old; \"→\"; \"\")}}{{19.done}}／{{19.total}} 項{{if(19.t0 > 0; newline; \"\")}}{{if(19.t0 > 0; \"• 編劇 已核准 \"; \"\")}}{{if(19.t0 > 0; 18.n5; \"\")}}{{if(19.t0 > 0; \"／\"; \"\")}}{{if(19.t0 > 0; 19.t0; \"\")}}{{if(18.n1 != 18.o1; \"｜尚未開始 \"; \"\")}}{{if(18.n1 != 18.o1; 18.o1; \"\")}}{{if(18.n1 != 18.o1; \"→\"; \"\")}}{{if(18.n1 != 18.o1; 18.n1; \"\")}}{{if(18.n2 != 18.o2; \"｜執行中 \"; \"\")}}{{if(18.n2 != 18.o2; 18.o2; \"\")}}{{if(18.n2 != 18.o2; \"→\"; \"\")}}{{if(18.n2 != 18.o2; 18.n2; \"\")}}{{if(18.n3 != 18.o3; \"｜待審核 \"; \"\")}}{{if(18.n3 != 18.o3; 18.o3; \"\")}}{{if(18.n3 != 18.o3; \"→\"; \"\")}}{{if(18.n3 != 18.o3; 18.n3; \"\")}}{{if(18.n4 != 18.o4; \"｜退回修改 \"; \"\")}}{{if(18.n4 != 18.o4; 18.o4; \"\")}}{{if(18.n4 != 18.o4; \"→\"; \"\")}}{{if(18.n4 != 18.o4; 18.n4; \"\")}}{{if(18.n5 != 18.o5; \"｜已核准 \"; \"\")}}{{if(18.n5 != 18.o5; 18.o5; \"\")}}{{if(18.n5 != 18.o5; \"→\"; \"\")}}{{if(18.n5 != 18.o5; 18.n5; \"\")}}{{if(19.t1 > 0; newline; \"\")}}{{if(19.t1 > 0; \"• 藝術總監 已核准 \"; \"\")}}{{if(19.t1 > 0; 18.n10; \"\")}}{{if(19.t1 > 0; \"／\"; \"\")}}{{if(19.t1 > 0; 19.t1; \"\")}}{{if(18.n6 != 18.o6; \"｜尚未開始 \"; \"\")}}{{if(18.n6 != 18.o6; 18.o6; \"\")}}{{if(18.n6 != 18.o6; \"→\"; \"\")}}{{if(18.n6 != 18.o6; 18.n6; \"\")}}{{if(18.n7 != 18.o7; \"｜執行中 \"; \"\")}}{{if(18.n7 != 18.o7; 18.o7; \"\")}}{{if(18.n7 != 18.o7; \"→\"; \"\")}}{{if(18.n7 != 18.o7; 18.n7; \"\")}}{{if(18.n8 != 18.o8; \"｜待審核 \"; \"\")}}{{if(18.n8 != 18.o8; 18.o8; \"\")}}{{if(18.n8 != 18.o8; \"→\"; \"\")}}{{if(18.n8 != 18.o8; 18.n8; \"\")}}{{if(18.n9 != 18.o9; \"｜退回修改 \"; \"\")}}{{if(18.n9 != 18.o9; 18.o9; \"\")}}{{if(18.n9 != 18.o9; \"→\"; \"\")}}{{if(18.n9 != 18.o9; 18.n9; \"\")}}{{if(18.n10 != 18.o10; \"｜已核准 \"; \"\")}}{{if(18.n10 != 18.o10; 18.o10; \"\")}}{{if(18.n10 != 18.o10; \"→\"; \"\")}}{{if(18.n10 != 18.o10; 18.n10; \"\")}}{{if(19.t2 > 0; newline; \"\")}}{{if(19.t2 > 0; \"• 動畫總監 已核准 \"; \"\")}}{{if(19.t2 > 0; 18.n15; \"\")}}{{if(19.t2 > 0; \"／\"; \"\")}}{{if(19.t2 > 0; 19.t2; \"\")}}{{if(18.n11 != 18.o11; \"｜尚未開始 \"; \"\")}}{{if(18.n11 != 18.o11; 18.o11; \"\")}}{{if(18.n11 != 18.o11; \"→\"; \"\")}}{{if(18.n11 != 18.o11; 18.n11; \"\")}}{{if(18.n12 != 18.o12; \"｜執行中 \"; \"\")}}{{if(18.n12 != 18.o12; 18.o12; \"\")}}{{if(18.n12 != 18.o12; \"→\"; \"\")}}{{if(18.n12 != 18.o12; 18.n12; \"\")}}{{if(18.n13 != 18.o13; \"｜待審核 \"; \"\")}}{{if(18.n13 != 18.o13; 18.o13; \"\")}}{{if(18.n13 != 18.o13; \"→\"; \"\")}}{{if(18.n13 != 18.o13; 18.n13; \"\")}}{{if(18.n14 != 18.o14; \"｜退回修改 \"; \"\")}}{{if(18.n14 != 18.o14; 18.o14; \"\")}}{{if(18.n14 != 18.o14; \"→\"; \"\")}}{{if(18.n14 != 18.o14; 18.n14; \"\")}}{{if(18.n15 != 18.o15; \"｜已核准 \"; \"\")}}{{if(18.n15 != 18.o15; 18.o15; \"\")}}{{if(18.n15 != 18.o15; \"→\"; \"\")}}{{if(18.n15 != 18.o15; 18.n15; \"\")}}{{if(19.t3 > 0; newline; \"\")}}{{if(19.t3 > 0; \"• 聲音總監 已核准 \"; \"\")}}{{if(19.t3 > 0; 18.n20; \"\")}}{{if(19.t3 > 0; \"／\"; \"\")}}{{if(19.t3 > 0; 19.t3; \"\")}}{{if(18.n16 != 18.o16; \"｜尚未開始 \"; \"\")}}{{if(18.n16 != 18.o16; 18.o16; \"\")}}{{if(18.n16 != 18.o16; \"→\"; \"\")}}{{if(18.n16 != 18.o16; 18.n16; \"\")}}{{if(18.n17 != 18.o17; \"｜執行中 \"; \"\")}}{{if(18.n17 != 18.o17; 18.o17; \"\")}}{{if(18.n17 != 18.o17; \"→\"; \"\")}}{{if(18.n17 != 18.o17; 18.n17; \"\")}}{{if(18.n18 != 18.o18; \"｜待審核 \"; \"\")}}{{if(18.n18 != 18.o18; 18.o18; \"\")}}{{if(18.n18 != 18.o18; \"→\"; \"\")}}{{if(18.n18 != 18.o18; 18.n18; \"\")}}{{if(18.n19 != 18.o19; \"｜退回修改 \"; \"\")}}{{if(18.n19 != 18.o19; 18.o19; \"\")}}{{if(18.n19 != 18.o19; \"→\"; \"\")}}{{if(18.n19 != 18.o19; 18.n19; \"\")}}{{if(18.n20 != 18.o20; \"｜已核准 \"; \"\")}}{{if(18.n20 != 18.o20; 18.o20; \"\")}}{{if(18.n20 != 18.o20; \"→\"; \"\")}}{{if(18.n20 != 18.o20; 18.n20; \"\")}}{{if(19.t4 > 0; newline; \"\")}}{{if(19.t4 > 0; \"• 製片人 已核准 \"; \"\")}}{{if(19.t4 > 0; 18.n25; \"\")}}{{if(19.t4 > 0; \"／\"; \"\")}}{{if(19.t4 > 0; 19.t4; \"\")}}{{if(18.n21 != 18.o21; \"｜尚未開始 \"; \"\")}}{{if(18.n21 != 18.o21; 18.o21; \"\")}}{{if(18.n21 != 18.o21; \"→\"; \"\")}}{{if(18.n21 != 18.o21; 18.n21; \"\")}}{{if(18.n22 != 18.o22; \"｜執行中 \"; \"\")}}{{if(18.n22 != 18.o22; 18.o22; \"\")}}{{if(18.n22 != 18.o22; \"→\"; \"\")}}{{if(18.n22 != 18.o22; 18.n22; \"\")}}{{if(18.n23 != 18.o23; \"｜待審核 \"; \"\")}}{{if(18.n23 != 18.o23; 18.o23; \"\")}}{{if(18.n23 != 18.o23; \"→\"; \"\")}}{{if(18.n23 != 18.o23; 18.n23; \"\")}}{{if(18.n24 != 18.o24; \"｜退回修改 \"; \"\")}}{{if(18.n24 != 18.o24; 18.o24; \"\")}}{{if(18.n24 != 18.o24; \"→\"; \"\")}}{{if(18.n24 != 18.o24; 18.n24; \"\")}}{{if(18.n25 != 18.o25; \"｜已核准 \"; \"\")}}{{if(18.n25 != 18.o25; 18.o25; \"\")}}{{if(18.n25 != 18.o25; \"→\"; \"\")}}{{if(18.n25 != 18.o25; 18.n25; \"\")}}{{if(19.t5 > 0; newline; \"\")}}{{if(19.t5 > 0; \"• 副製片 已核准 \"; \"\")}}{{if(19.t5 > 0; 18.n30; \"\")}}{{if(19.t5 > 0; \"／\"; \"\")}}{{if(19.t5 > 0; 19.t5; \"\")}}{{if(18.n26 != 18.o26; \"｜尚未開始 \"; \"\")}}{{if(18.n26 != 18.o26; 18.o26; \"\")}}{{if(18.n26 != 18.o26; \"→\"; \"\")}}{{if(18.n26 != 18.o26; 18.n26; \"\")}}{{if(18.n27 != 18.o27; \"｜執行中 \"; \"\")}}{{if(18.n27 != 18.o27; 18.o27; \"\")}}{{if(18.n27 != 18.o27; \"→\"; \"\")}}{{if(18.n27 != 18.o27; 18.n27; \"\")}}{{if(18.n28 != 18.o28; \"｜待審核 \"; \"\")}}{{if(18.n28 != 18.o28; 18.o28; \"\")}}{{if(18.n28 != 18.o28; \"→\"; \"\")}}{{if(18.n28 != 18.o28; 18.n28; \"\")}}{{if(18.n29 != 18.o29; \"｜退回修改 \"; \"\")}}{{if(18.n29 != 18.o29; 18.o29; \"\")}}{{if(18.n29 != 18.o29; \"→\"; \"\")}}{{if(18.n29 != 18.o29; 18.n29; \"\")}}{{if(18.n30 != 18.o30; \"｜已核准 \"; \"\")}}{{if(18.n30 != 18.o30; 18.o30; \"\")}}{{if(18.n30 != 18.o30; \"→\"; \"\")}}{{if(18.n30 != 18.o30; 18.n30; \"\")}}{{if(19.t6 > 0; newline; \"\")}}{{if(19.t6 > 0; \"• 導演 已核准 \"; \"\")}}{{if(19.t6 > 0; 18.n35; \"\")}}{{if(19.t6 > 0; \"／\"; \"\")}}{{if(19.t6 > 0; 19.t6; \"\")}}{{if(18.n31 != 18.o31; \"｜尚未開始 \"; \"\")}}{{if(18.n31 != 18.o31; 18.o31; \"\")}}{{if(18.n31 != 18.o31; \"→\"; \"\")}}{{if(18.n31 != 18.o31; 18.n31; \"\")}}{{if(18.n32 != 18.o32; \"｜執行中 \"; \"\")}}{{if(18.n32 != 18.o32; 18.o32; \"\")}}{{if(18.n32 != 18.o32; \"→\"; \"\")}}{{if(18.n32 != 18.o32; 18.n32; \"\")}}{{if(18.n33 != 18.o33; \"｜待審核 \"; \"\")}}{{if(18.n33 != 18.o33; 18.o33; \"\")}}{{if(18.n33 != 18.o33; \"→\"; \"\")}}{{if(18.n33 != 18.o33; 18.n33; \"\")}}{{if(18.n34 != 18.o34; \"｜退回修改 \"; \"\")}}{{if(18.n34 != 18.o34; 18.o34; \"\")}}{{if(18.n34 != 18.o34; \"→\"; \"\")}}{{if(18.n34 != 18.o34; 18.n34; \"\")}}{{if(18.n35 != 18.o35; \"｜已核准 \"; \"\")}}{{if(18.n35 != 18.o35; 18.o35; \"\")}}{{if(18.n35 != 18.o35; \"→\"; \"\")}}{{if(18.n35 != 18.o35; 18.n35; \"\")}}\n{{if(17.snap = \"\"; \"（第一次推播，之後會標出和上次相比的變化）\"; if(19.snap = 17.snap; \"和上次推播相比沒有變化\"; \"｜後面是「上次→現在」\"))}}\n\n打開選單看詳細進度：https://liff.line.me/LIFF ID"
+     }
+    ],
+    "scope": "roundtrip"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1500,
+     "name": "推播訊息（每日）"
+    }
+   }
+  },
+  {
+   "id": 21,
+   "module": "notion:makeApiCall",
+   "version": 1,
+   "mapper": {
+    "url": "/v1/pages/{{17.page}}",
+    "method": "PATCH",
+    "version": "2022-06-28",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "qs": [],
+    "body": "{\"properties\": {\"上次數字\": {\"rich_text\": [{\"text\": {\"content\": \"{{19.snap}}\"}}]}, \"上次推播時間\": {\"date\": {\"start\": \"{{now}}\"}}}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1650,
+     "name": "記下這次推播的數字（每日）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:notion2,notion3",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "parameters": {
+    "__IMTCONN__": 0
+   }
+  },
+  {
+   "id": 22,
+   "module": "builtin:BasicFeeder",
+   "version": 1,
+   "mapper": {
+    "array": "{{split(17.ids; \",\")}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1800,
+     "name": "逐一推給成員（每日）"
+    }
+   },
+   "filter": {
+    "name": "有成員可推",
+    "conditions": [
+     [
+      {
+       "a": "{{17.ids}}",
+       "o": "exist"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "id": 24,
+   "module": "line:makeApiCall",
+   "version": 1,
+   "parameters": {
+    "__IMTCONN__": 0
+   },
+   "mapper": {
+    "url": "/v2/bot/message/push",
+    "method": "POST",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": "{\"to\":\"{{22.value}}\",\"messages\":[{\"type\":\"text\",\"text\":\"{{replace(20.msg; newline; \"\\n\")}}\"}]}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 1950,
+     "name": "推播進度（每日）"
+    },
+    "parameters": [
+     {
+      "name": "__IMTCONN__",
+      "type": "account:line2",
+      "label": "Connection",
+      "required": true
+     }
+    ]
+   },
+   "onerror": [
+    {
+     "id": 23,
+     "module": "builtin:Ignore",
+     "version": 1,
+     "mapper": null,
+     "metadata": {
+      "designer": {
+       "x": 1200,
+       "y": 1800
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "metadata": {
+  "instant": false,
+  "version": 1,
+  "designer": {
+   "orphans": []
+  },
+  "scenario": {
+   "dlq": true,
+   "slots": null,
+   "dataloss": false,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "roundtrips": 1,
+   "sequential": false,
+   "confidential": false,
+   "freshVariables": false,
+   "autoCommitTriggerLast": true
+  }
+ }
+}

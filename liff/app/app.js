@@ -247,7 +247,7 @@ function renderJoin() {
       ${open.map((p) => `<option value="${esc(p.id)}" ${p.id === f.project ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
     <label class="f">角色 <b>*</b><select id="fRole"><option value="">請選擇</option>
       ${APPLY_ROLES().map((r) => `<option ${r === f.role ? 'selected' : ''}>${r}</option>`).join('')}</select></label>
-    <p class="empty">製片人的申請由平台管理者核准，其他角色由該專案的製片人核准。同一個人可以申請多個專案或多個角色；已經有人擔任的角色不能再申請。</p>
+    <p class="empty">製片人的申請由平台管理者核准，其他角色由該專案的製片人核准。同一個人可以申請多個專案或多個角色${S.roles.one_per_role === false ? '' : '；已經有人擔任的角色不能再申請'}。</p>
     <label class="f">補充說明（選填）<textarea id="fNote" maxlength="300">${esc(f.note)}</textarea></label>
   </section>`);
   $('#app').innerHTML = html.join('');

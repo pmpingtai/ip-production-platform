@@ -50,6 +50,7 @@ CREATORS, MANAGERS, APPROVERS = ROLES_CFG["creators"], ROLES_CFG["managers"], RO
 ROLES = CREATORS + MANAGERS
 ALIASES = ROLES_CFG["aliases"]
 APPLY_ROLES = ROLES   # 七個角色都開放申請（2026-11-02 起）；製片人的申請只有平台管理者能核准
+ONE_PER_ROLE = bool(ROLES_CFG.get("one_per_role", True))   # 同一個專案的同一個角色只能一個人
 
 # 選單（Notion「目前選單」的選項）→ LINE 選單別名、圖片檔名、按鈕（相對 LIFF 網址的參數、說明）
 MENUS = {
@@ -459,16 +460,17 @@ def build_api():
         {"property": "角色", "select": {"equals": f"{{{{{ar['id']}.r}}}}"}},
         {"property": "狀態", "select": {"equals": "已核准"}}]}, "page_size": 1}, ensure_ascii=False))
     taken_id = "{{first(map(" + f"{taken_q['id']}.body.results" + '; "id"))}}'
-    apply_flow = [ar, taken_q, b.router("這個角色有人了嗎", [
-      (flt("已經有人", [[c(taken_id, "exist")]]), [respond("回傳角色已有人", '{"ok":false,"error":"taken"}', "409")]),
-      (flt("還沒有人", [[c(taken_id, "notexist")]]), [b.router("申請加入", [
+    join = b.router("申請加入", [
         (flt("新申請（還沒有名冊）", [[none]]), [
             person, new_application("新成員", f"{person['id']}.id"), respond("回傳已送出申請（新）", '{"ok":true}')]),
         (flt("已有名冊", [[exist, active]]), [
             b.update("更新姓名", w_page, [fv("姓名", "title", cut("1.name", 40)), fv("LINE 顯示名稱", "rich_text", DISPLAY)]),
             new_application("已有名冊", f"{W}.id"), respond("回傳已送出申請", '{"ok":true}')]),
         (flt("已停用", [[exist, disabled]]), [forbidden("回傳沒有權限（申請）")]),
-    ])])])]
+    ])
+    apply_flow = [ar, taken_q, b.router("這個角色有人了嗎", [
+      (flt("已經有人", [[c(taken_id, "exist")]]), [respond("回傳角色已有人", '{"ok":false,"error":"taken"}', "409")]),
+      (flt("還沒有人", [[c(taken_id, "notexist")]]), [join])])] if ONE_PER_ROLE else [join]
 
     # ---- tasks：我參與的專案裡、我看得到的任務 ----
     # 製片人、副製片、導演看得到該專案全部任務；其他角色只看得到執行職掌是自己角色的任務。在 Make 端篩，不靠頁面
@@ -614,9 +616,11 @@ def build_api():
             (flt(f"換成{m}選單", [[c(FM, "text:equal", m), c(ap_menu, "text:notequal", m)]]), link_menu(b, T1_uid, AP_page, m, "核准"))
             for m in ("團隊成員", "導演", "製片人")]),
     ]
-    approve_flow = [*pre1, rv, dup, b.router("可否核准", [
-        (flt("可以核准", [ok1 + [c(dup_id, "notexist"), role_ok]]), approve_route),
-        (flt("角色已有人", [[c(dup_id, "exist")]]), [respond("回傳角色已有人（核准）", '{"ok":false,"error":"taken"}', "409")]),
+    free = [c(dup_id, "notexist")] if ONE_PER_ROLE else []
+    approve_flow = [*pre1, rv, *([dup] if ONE_PER_ROLE else []), b.router("可否核准", [
+        (flt("可以核准", [ok1 + free + [role_ok]]), approve_route),
+        *([(flt("角色已有人", [[c(dup_id, "exist")]]), [respond("回傳角色已有人（核准）", '{"ok":false,"error":"taken"}', "409")])]
+          if ONE_PER_ROLE else []),
         (flt("不能核准", bad1 + [[role_bad]]), [respond("回傳不能核准", '{"ok":false,"error":"bad_target"}', "409")]),
     ])]
 

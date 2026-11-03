@@ -811,12 +811,34 @@ def build_api():
 
 
 # ==== 風雅存｜LINE 事件 ====
+MENU_WORDS = ["menu", "選單"]   # 電腦版看不到圖文選單，輸入這些字回覆一張按鈕卡片
+
+
+def menu_card(menu):
+    """圖文選單的按鈕做成 Flex 卡片（回覆訊息不扣推播額度）"""
+    buttons = [{"type": "button", "style": "primary" if i == 0 else "secondary", "height": "sm",
+                "action": {"type": "uri", "label": text, "uri": LIFF + q}} for i, (q, text) in enumerate(MENUS[menu][2])]
+    return {"type": "flex", "altText": "選單", "contents": {"type": "bubble", "size": "kilo", "body": {
+        "type": "box", "layout": "vertical", "spacing": "md",
+        "contents": [{"type": "text", "text": "選單", "weight": "bold", "size": "lg"}, *buttons]}}}
+
+
+def reply_routes(cur):
+    """名冊的「目前選單」→ 回覆哪一張卡片（舊值「製作人」視同製片人；沒有名冊資料或其他值都給訪客）"""
+    named = {"團隊成員": ["團隊成員"], "導演": ["導演"], "製片人": ["製片人", "製作人"]}
+    routes = [(menu, [[c(cur, "text:equal", n)] for n in names]) for menu, names in named.items()]
+    others = [c(cur, "text:notequal", n) for names in named.values() for n in names]
+    return routes + [("訪客", [others])]
+
+
 def build_events():
-    """加好友（follow）就在名冊建一筆訪客；封鎖（unfollow）時標記。只處理每次送來的第一個事件。"""
+    """加好友（follow）就在名冊建一筆訪客；封鎖（unfollow）時標記；輸入 menu 回覆選單卡片。只處理每次送來的第一個事件。"""
     b = B()
     uid, typ = "{{1.events[1].source.userId}}", "{{1.events[1].type}}"
+    said = "{{lower(trim(1.events[1].message.text))}}"
+    asked = [[c(typ, "text:equal", "message"), c(said, "text:equal", w)] for w in MENU_WORDS]
     w = b.search("找名冊", DS_MEMBER, [[c(prop("LINE User ID", "rich_text"), "text:equals", uid)]])
-    w["filter"] = flt("只處理加好友、封鎖", [[c(typ, "text:equal", "follow")], [c(typ, "text:equal", "unfollow")]])
+    w["filter"] = flt("只處理加好友、封鎖、選單", [[c(typ, "text:equal", "follow")], [c(typ, "text:equal", "unfollow")], *asked])
     W = w["id"]
     exist, none = c(f"{{{{{W}.id}}}}", "exist"), c(f"{{{{{W}.id}}}}", "notexist")
     prof = b.line("取得 LINE 名稱", f"/v2/bot/profile/{uid}")
@@ -843,6 +865,10 @@ def build_events():
                     for menu, names in (("團隊成員", ["團隊成員"]), ("導演", ["導演"]), ("製片人", ["製片人", "製作人"]))])]),
             (flt("封鎖", [[c(typ, "text:equal", "unfollow"), exist]]), [
                 b.update("標記已封鎖", f"{{{{{W}.id}}}}", [fv("好友狀態", "select", "已封鎖")])]),
+            *[(flt(f"回覆{menu}選單", [g + conds for g in asked for conds in when]), [
+                b.line(f"回覆{menu}選單", "/v2/bot/message/reply", "POST",
+                       {"replyToken": "{{1.events[1].replyToken}}", "messages": [menu_card(menu)]}, onerror=[b.ignore()])])
+              for menu, when in reply_routes(sp(W, "目前選單", ".name"))],
         ]),
     ]
     return blueprint("LINE 事件", flow)

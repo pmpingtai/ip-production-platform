@@ -86,6 +86,19 @@ const isManager = () => isMember() && (isAdmin() || approved().some((a) => S.rol
 const isApprover = () => isMember() && (isAdmin() || hasRole('製片人'));
 const ROLE_RANK = ['製片人', '導演', '副製片', '編劇', '藝術總監', '動畫總監', '聲音總監'];
 const topRole = () => (isAdmin() ? '平台管理者' : ROLE_RANK.find(hasRole) || '');
+const byRank = (roles) => ROLE_RANK.filter((r) => roles.includes(r));
+// 身分＝專案＋職稱，記成「專案編號:角色」。我的工作可以切換身分（有兩個以上才出現切換）
+const identities = () => (S.projects || []).flatMap((p) => byRank(rolesIn(p.id)).map((r) => `${p.id}:${r}`));
+const splitIdentity = (key) => { const i = key.lastIndexOf(':'); return { pid: key.slice(0, i), role: key.slice(i + 1) }; };
+const identityText = (key) => { const { pid, role } = splitIdentity(key); return `${projectName(pid) || '專案'}・${role}`; };
+// 右上角：我的工作選了某個身分就顯示那個身分；否則顯示第一個身分，其他的用「＋N」
+function badgeText() {
+  if (S.view === 'work' && S.group.includes(':')) return identityText(S.group);
+  if (isAdmin()) return '平台管理者';
+  const ids = identities();
+  if (ids.length) return ids.length > 1 ? `${identityText(ids[0])} ＋${ids.length - 1}` : identityText(ids[0]);
+  return byRank(approved().map((a) => a.role)).join('・');
+}
 // 七個角色都能申請（2026-11-02 起）；製片人的申請只有平台管理者能核准
 const APPLY_ROLES = () => [...S.roles.managers, ...S.roles.creators];
 
@@ -159,7 +172,7 @@ function render() {
   const st = S.me?.state;
   badge.hidden = !S.me || st === 'guest';
   badge.className = `badge ${st === 'pending' ? 'pending' : st === 'member' ? '' : 'muted'}`;
-  badge.textContent = st === 'member' ? topRole() : st === 'pending' ? '審核中' : st === 'rejected' ? '未通過' : st === 'disabled' ? '停用' : '';
+  badge.textContent = st === 'member' ? badgeText() : st === 'pending' ? '審核中' : st === 'rejected' ? '未通過' : st === 'disabled' ? '停用' : '';
   $('#navBack').hidden = !canGoBack();
   $('#bar').hidden = true;
   $('#tabs').hidden = true;
@@ -251,8 +264,23 @@ const statusTiles = (s) => tiles([
 
 // ---- 我的工作（2026-11-02 起併入原本的我的進度）：上方看整體進度與六格數字，下方是要處理的工作 ----
 function renderWork() {
-  const v = buildMine({ tasks: S.tasks, roles: rolesIn(S.projectId), rolesFor: rolesIn, roleOf: S.roleOf, projectId: S.projectId });
-  const opts = { today: v.today };
+  // 有兩個以上身分（專案＋職稱）時，上方的切換取代專案標籤：全部身分，或只看某個專案的某個職稱
+  const mine = identities();
+  if (!mine.includes(S.group)) S.group = '全部';
+  if (mine.length > 1) {
+    $('#ptabs').hidden = true;
+    $('#tabs').innerHTML = ['全部', ...mine].map((g) => `<button data-group="${esc(g)}" aria-pressed="${g === S.group}">${
+      esc(g === '全部' ? '全部身分' : identityText(g))}</button>`).join('');
+    $('#tabs').hidden = false;
+  }
+  $('#badge').textContent = badgeText();
+  const picked = S.group === '全部' ? null : splitIdentity(S.group);
+  if (picked) S.projectId = picked.pid;
+  else if (mine.length > 1 && new Set(mine.map((g) => splitIdentity(g).pid)).size > 1) S.projectId = 'all';
+  const only = (roles) => (picked ? roles.filter((r) => r === picked.role) : roles);
+  const v = buildMine({ tasks: S.tasks, roles: only(rolesIn(S.projectId)), rolesFor: (pid) => only(rolesIn(pid)),
+    roleOf: S.roleOf, projectId: S.projectId });
+  const opts = { today: v.today, showRole: !picked && mine.length > 1 };
   // 已經是成員的人也能再申請別的專案或角色
   const applyLink = `<a class="link" href="?v=join"><span class="ic">➕</span><span><b>申請新專案的職位</b>
     <small>七個角色都能申請；看我在各專案的角色與申請狀態</small></span></a>`;
@@ -260,9 +288,10 @@ function renderWork() {
     $('#app').innerHTML = `<p class="empty center">${S.projectId === 'all' ? '你參與的專案' : '這個專案'}目前沒有指派給你的任務</p>${applyLink}`;
     setFoot(v); return;
   }
-  const html = [progressCard(S.projectId === 'all' ? '我的總工作量（全部專案）' : '我的進度', v.summary), statusTiles(v.summary)];
+  const who = picked ? identityText(S.group) : '我';
+  const html = [progressCard(S.projectId === 'all' ? `${who}的總工作量（全部專案）` : `${who}的進度`, v.summary), statusTiles(v.summary)];
   if (S.filter) {
-    $('#app').innerHTML = [html[1], ...filteredView(v)].join('');
+    $('#app').innerHTML = [html[1], ...filteredView(v, { showRole: opts.showRole })].join('');
     setFoot(v);
     return;
   }
